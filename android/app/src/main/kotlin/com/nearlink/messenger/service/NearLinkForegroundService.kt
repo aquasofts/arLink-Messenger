@@ -1,6 +1,7 @@
 package com.nearlink.messenger.service
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -145,6 +146,7 @@ class NearLinkForegroundService : Service() {
         startBluetoothEdge()
     }
 
+    @SuppressLint("MissingPermission")
     private fun startBluetoothEdge() {
         if (!PermissionHelper.allGranted(this, BluetoothPermissions.runtime)) return
         scope.launch {

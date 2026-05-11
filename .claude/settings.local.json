@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(./gradlew :app:testDebugUnitTest *)",
-      "Bash(gradle wrapper *)"
+      "Bash(gradle wrapper *)",
+      "Bash(unzip -q -o \"gradle-8.14.5-all.zip\" -d \".claude/gradle\")",
+      "Bash(\".claude/gradle/gradle-8.14.5/bin/gradle\" -p \"android\" :app:lintDebug --continue)"
     ]
   }
 }
