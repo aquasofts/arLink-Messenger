@@ -1,0 +1,54 @@
+<resources>
+    <string name="app_name">NearLink</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">欢迎使用 NearLink</string>
+    <string name="onboarding_desc">无需账号，端到端加密。即将为本设备生成身份…</string>
+    <string name="onboarding_continue">开始使用</string>
+
+    <!-- Permission rationale -->
+    <string name="perm_title">需要少量权限</string>
+    <string name="perm_bluetooth_rationale">蓝牙权限用于发现附近的好友设备并直接通信。我们不会上传你的位置。</string>
+    <string name="perm_notification_rationale">通知权限用于显示新消息提醒。</string>
+    <string name="perm_microphone_rationale">麦克风权限仅在你录制语音消息时使用。</string>
+    <string name="perm_grant">授予</string>
+    <string name="perm_skip">暂不</string>
+
+    <!-- Home / nav -->
+    <string name="tab_chats">聊天</string>
+    <string name="tab_contacts">联系人</string>
+    <string name="tab_profile">我</string>
+
+    <!-- Profile -->
+    <string name="profile_device_id">设备 ID</string>
+    <string name="profile_fingerprint">公钥指纹</string>
+    <string name="profile_nickname">昵称</string>
+
+    <!-- Pair -->
+    <string name="pair_discover">扫描附近</string>
+    <string name="pair_advertise">让别人发现我</string>
+    <string name="pair_safety_title">请核对安全码</string>
+    <string name="pair_safety_hint">两台手机显示完全相同时点 "确认"。</string>
+    <string name="pair_confirm">确认</string>
+    <string name="pair_cancel">取消</string>
+
+    <!-- Chat -->
+    <string name="chat_input_hint">输入消息</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_typing">正在输入…</string>
+    <string name="chat_revoked">已撤回</string>
+    <string name="chat_edited">已编辑</string>
+
+    <!-- Status -->
+    <string name="status_bt_online">蓝牙在线</string>
+    <string name="status_server_online">服务器在线</string>
+    <string name="status_offline">离线</string>
+    <string name="status_last_seen">最后在线 %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_server_url">服务器地址</string>
+    <string name="settings_server_url_hint">wss://example.com/v1/ws</string>
+    <string name="settings_save">保存</string>
+    <string name="settings_db_encryption">数据库加密 (SQLCipher)</string>
+    <string name="settings_about">关于</string>
+</resources>

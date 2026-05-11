@@ -1,0 +1,254 @@
+name: release
+
+# 打 tag 时自动发布 GitHub Release：
+#   - 构建 Android Release APK（签名可选：如果你在仓库 Secrets 里配了 keystore，
+#     就走签名流程；没配就发 unsigned APK）
+#   - 构建服务器二进制（linux/amd64 与 linux/arm64）
+#   - 生成 SHA256SUMS
+#   - 创建 / 更新 GitHub Release，把上述文件作为资产挂上
+#
+# 触发：`git tag vX.Y.Z && git push origin vX.Y.Z`
+#
+# 需要的可选 Secrets（都填才会自动签名；少任何一个都退回 unsigned）：
+#   ANDROID_KEYSTORE_BASE64     -> 用 `base64 -w0 release.keystore` 输出的内容
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "已存在的 tag（例如 v0.1.0）"
+        required: true
+
+permissions:
+  contents: write       # 创建 release 需要
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GO_VERSION: "1.22"
+
+jobs:
+  android:
+    name: android release apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate wrapper if missing
+        run: |
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.9
+          fi
+          chmod +x gradlew
+
+      - name: Detect whether signing is configured
+        id: signing
+        env:
+          KS_B64:    ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PWD:    ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PWD:   ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ] && [ -n "$KS_PWD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PWD" ]; then
+            echo "enabled=true"  >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Materialize keystore + signing.properties
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          KS_B64:    ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PWD:    ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PWD:   ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KS_B64" | base64 -d > /tmp/release.keystore
+          cat > signing.properties <<EOF
+          storeFile=/tmp/release.keystore
+          storePassword=${KS_PWD}
+          keyAlias=${KEY_ALIAS}
+          keyPassword=${KEY_PWD}
+          EOF
+
+      - name: Assemble Release APK
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: Collect APK (signed or unsigned)
+        id: apk
+        run: |
+          mkdir -p out
+          src=""
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            src=app/build/outputs/apk/release/app-release.apk
+          elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+            src=app/build/outputs/apk/release/app-release-unsigned.apk
+          else
+            echo "no release apk produced" >&2
+            ls -la app/build/outputs/apk/release || true
+            exit 1
+          fi
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          out="out/nearlink-$tag.apk"
+          cp "$src" "$out"
+          sha256sum "$out" > "$out.sha256"
+          echo "path=android/$out" >> "$GITHUB_OUTPUT"
+          echo "sha=android/$out.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact (for release job)
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            android/out/*.apk
+            android/out/*.sha256
+          if-no-files-found: error
+
+  server:
+    name: server binaries (linux amd64+arm64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            runner_cc: ""
+          - goos: linux
+            goarch: arm64
+            runner_cc: "aarch64-linux-gnu-gcc"
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install cross-compiler (arm64 only)
+        if: matrix.goarch == 'arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: server/go.sum
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "1"
+          CC: ${{ matrix.runner_cc }}
+        run: |
+          if [ ! -f go.sum ]; then go mod tidy; fi
+          mkdir -p out
+          name="nearlink-server-${GOOS}-${GOARCH}"
+          go build -trimpath -ldflags="-s -w" -o "out/${name}" ./cmd/nearlink-server
+          (cd out && sha256sum "${name}" > "${name}.sha256")
+
+      - name: Upload server binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            server/out/*
+          if-no-files-found: error
+
+  release:
+    name: publish github release
+    runs-on: ubuntu-latest
+    needs: [android, server]
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Flatten artifacts + checksum
+        run: |
+          mkdir -p release
+          # 把不同 artifact 里的文件拍平
+          find dist -type f \( -name "*.apk" -o -name "nearlink-server-*" -o -name "*.sha256" \) -print0 \
+            | xargs -0 -I{} cp -n "{}" release/ || true
+          cd release
+          # 重新汇总一个顶层 SHA256SUMS
+          : > SHA256SUMS
+          for f in *; do
+            [ "$f" = SHA256SUMS ] && continue
+            [ -d "$f" ] && continue
+            sha256sum "$f" >> SHA256SUMS
+          done
+          ls -la
+
+      - name: Build release notes
+        id: notes
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          {
+            echo "## NearLink Messenger $tag"
+            echo
+            echo "自动构建产物："
+            echo
+            echo "- **Android APK**（端到端加密客户端）"
+            echo "- **Server** linux/amd64 与 linux/arm64 二进制"
+            echo "- \`SHA256SUMS\` 所有产物哈希"
+            echo
+            echo "### 验证"
+            echo
+            echo '```bash'
+            echo "sha256sum -c SHA256SUMS"
+            echo '```'
+            echo
+            echo "### 部署服务器"
+            echo
+            echo "见 [docs/server-deploy.md](https://github.com/${{ github.repository }}/blob/$tag/docs/server-deploy.md)。"
+          } > NOTES.md
+          echo "path=NOTES.md" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: NOTES.md
+          files: release/*
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          fail_on_unmatched_files: true

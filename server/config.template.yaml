@@ -1,0 +1,31 @@
+http:
+  addr: "${NEARLINK_HTTP_ADDR}"
+  read_timeout: 15s
+  write_timeout: 15s
+  shutdown_timeout: 10s
+
+ws:
+  max_message_bytes: ${NEARLINK_MAX_MSG_BYTES}
+  ping_interval: 30s
+  pong_wait: 90s
+  write_wait: 10s
+
+auth:
+  challenge_ttl: 60s
+  clock_skew: 5m
+
+rate_limit:
+  per_device_per_sec: 10
+  burst_per_device: 30
+
+storage:
+  driver: ${NEARLINK_STORAGE_DRIVER}
+  dsn: "${NEARLINK_STORAGE_DSN}"
+
+offline:
+  ttl: ${NEARLINK_OFFLINE_TTL}
+  max_per_to: 5000
+
+log:
+  level: ${NEARLINK_LOG_LEVEL}
+  json: true

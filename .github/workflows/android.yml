@@ -1,0 +1,115 @@
+name: android
+
+# 每次 push / PR 只要改 android/ 目录就跑：
+#  - 单元测试
+#  - 构建 debug APK
+#  - 产物作为 artifact 上传（保留 7 天）
+#
+# 依赖：仓库里没有 gradle-wrapper.jar；我们用 gradle/actions/setup-gradle 起一个
+# 带缓存的 Gradle，再手动跑 `gradle wrapper` 生成 wrapper 一次，
+# 之后 `./gradlew` 就能用。
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+    inputs:
+      server_url:
+        description: "默认服务器 URL（可选，写进 BuildConfig.DEFAULT_SERVER_URL）"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build (Debug APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle (with cache)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # 我们下面会先 `gradle wrapper` 把 wrapper 生成出来；
+          # setup-gradle 默认会在 gradle/wrapper/ 存在时启用 wrapper-cache，这里先关掉以免首次 miss。
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+
+      - name: Generate Gradle wrapper (first time only)
+        run: |
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.9
+          fi
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest --stacktrace
+
+      - name: Lint (debug)
+        # 不让 lint 阻塞 CI：--continue + 即便失败也上传报告
+        continue-on-error: true
+        run: ./gradlew :app:lintDebug --continue
+
+      - name: Assemble Debug APK
+        run: |
+          if [ -n "${{ github.event.inputs.server_url }}" ]; then
+            ./gradlew :app:assembleDebug \
+              -Pnearlink.defaultServer='${{ github.event.inputs.server_url }}' \
+              --stacktrace
+          else
+            ./gradlew :app:assembleDebug --stacktrace
+          fi
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload unit test reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unit-test-reports-${{ github.run_number }}
+          path: android/app/build/reports/tests/testDebugUnitTest
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lint-${{ github.run_number }}
+          path: android/app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+          retention-days: 7

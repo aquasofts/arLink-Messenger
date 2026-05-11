@@ -1,0 +1,43 @@
+# Caddy 配置：使用环境变量 ${NEARLINK_DOMAIN} 自动适配你的域名。
+# - 公网域名（如 nearlink.example.com）→ Caddy 自动签 Let's Encrypt
+# - 本地/内网（值为 :80）→ Caddy 跑 HTTP，便于内网测试
+{
+    email {$NEARLINK_ACME_EMAIL}
+}
+
+{$NEARLINK_DOMAIN} {
+    encode zstd gzip
+
+    # WebSocket 长连接专用反代
+    @ws path /v1/ws*
+    reverse_proxy @ws server:8080 {
+        transport http {
+            keepalive 1h
+            keepalive_idle_conns 100
+        }
+        flush_interval -1
+    }
+
+    # 普通 HTTP API
+    reverse_proxy server:8080 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # 安全头
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "interest-cohort=()"
+        Cache-Control "no-store"
+    }
+
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 5
+        }
+        format console
+    }
+}

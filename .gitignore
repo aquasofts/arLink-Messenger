@@ -1,0 +1,29 @@
+# Build artefacts
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/.kotlin/
+
+server/bin/
+server/tmp/
+server/*.db
+server/data/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+**/signing.properties
+**/*.keystore
+**/*.jks
+server/config.yaml
+server/config.yaml.bak.*
+server/.env

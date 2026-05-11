@@ -1,0 +1,169 @@
+name: server
+
+# 每次 push / PR 只要改 server/ 或本工作流就跑：
+#  - go vet + go test
+#  - 构建 Linux amd64 二进制（给 release 用也够）
+#  - 构建 Docker 镜像（多架构 amd64 + arm64）
+#     * push 到 main 或 tag v* 时推到 GHCR
+#     * PR / 其它分支只 build 不 push，验证 Dockerfile 可用
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*.*.*"]
+    paths:
+      - "server/**"
+      - ".github/workflows/server.yml"
+  pull_request:
+    paths:
+      - "server/**"
+      - ".github/workflows/server.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write      # 推 GHCR 需要
+
+concurrency:
+  group: server-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ${{ github.repository }}/nearlink-server
+  GO_VERSION: "1.22"
+
+jobs:
+  test:
+    name: test (go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: server/go.sum
+
+      - name: go mod download
+        # go.sum 尚未提交时，允许它现场生成一次
+        run: |
+          if [ ! -f go.sum ]; then
+            go mod tidy
+          fi
+          go mod download
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test (race + cover)
+        env:
+          CGO_ENABLED: "1"   # mattn/go-sqlite3 需要
+        run: go test -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage-${{ github.run_number }}
+          path: server/coverage.out
+          if-no-files-found: ignore
+          retention-days: 7
+
+  build-binary:
+    name: build linux/amd64 binary
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: server/go.sum
+
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          mkdir -p bin
+          go build -trimpath -ldflags="-s -w" -o bin/nearlink-server ./cmd/nearlink-server
+          sha256sum bin/nearlink-server > bin/nearlink-server.sha256
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nearlink-server-linux-amd64-${{ github.run_number }}
+          path: |
+            server/bin/nearlink-server
+            server/bin/nearlink-server.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  docker:
+    name: docker image
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        # 只有 push 到 main/master 或 tag 时才登录 + 推；PR 不登录
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build (& push if on push)
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          file: server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Dockerfile 里有 CGO（sqlite 支持），buildx 会自动用 qemu 跨编；
+          # 如果后续想加速 arm64，换成 native-arm64 runner。
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

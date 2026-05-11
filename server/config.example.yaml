@@ -1,0 +1,35 @@
+http:
+  addr: ":8080"
+  read_timeout: 15s
+  write_timeout: 15s
+  shutdown_timeout: 10s
+
+ws:
+  max_message_bytes: 65536       # 单帧密文上限 64KiB；附件走文件 API
+  ping_interval: 30s
+  pong_wait: 90s
+  write_wait: 10s
+
+auth:
+  challenge_ttl: 60s
+  clock_skew: 5m
+
+rate_limit:
+  per_device_per_sec: 10
+  burst_per_device: 30
+
+storage:
+  # driver: postgres | sqlite
+  driver: sqlite
+  dsn: "file:/var/lib/nearlink/nearlink.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+  # 生产建议 postgres：
+  # driver: postgres
+  # dsn: "postgres://nearlink:CHANGE_ME@db:5432/nearlink?sslmode=disable"
+
+offline:
+  ttl: 14d                       # 解析时按 go duration，例如 336h
+  max_per_to: 5000
+
+log:
+  level: info                    # debug | info | warn | error
+  json: true
