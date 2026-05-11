@@ -1,6 +1,8 @@
 package com.nearlink.messenger.ui.screens.qr
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -11,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.nearlink.messenger.ui.components.QrCodeImage
+import com.nearlink.messenger.ui.components.QrScanButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +33,13 @@ fun QrMessageScreen(
             )
         }
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+        Column(
+            Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
             if (mode == QrMessageMode.SHOW) {
                 OutlinedTextField(
                     value = state.text,
@@ -54,6 +63,8 @@ fun QrMessageScreen(
                     textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
                 )
             } else {
+                QrScanButton { viewModel.setImportText(it) }
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.importText,
                     onValueChange = viewModel::setImportText,
