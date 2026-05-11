@@ -20,4 +20,6 @@ data class LanHello(
     @SerialName("device_id") val deviceId: String,
     val port: Int,
     val nickname: String? = null,
+    @SerialName("ed_pub") val edPub: String? = null,
+    @SerialName("x_pub") val xPub: String? = null,
 )

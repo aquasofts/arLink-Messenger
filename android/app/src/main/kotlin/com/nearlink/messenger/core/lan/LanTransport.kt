@@ -40,6 +40,8 @@ class LanTransport @Inject constructor(
         if (server.port > 0) discovery.start(server.port)
     }
 
+    fun peers(): SharedFlow<LanPeer> = discovery.peers()
+
     override fun isAvailable(peerDeviceId: String): Boolean = peers.containsKey(peerDeviceId)
 
     override suspend fun send(envelope: Envelope): Flow<DeliveryAck> = flow {

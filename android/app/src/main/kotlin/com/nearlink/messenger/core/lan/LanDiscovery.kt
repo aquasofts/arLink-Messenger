@@ -1,6 +1,7 @@
 package com.nearlink.messenger.core.lan
 
 import android.util.Log
+import com.nearlink.messenger.core.crypto.CryptoUtils
 import com.nearlink.messenger.core.crypto.IdentityKeyStore
 import com.nearlink.messenger.core.protocol.NLJson
 import kotlinx.coroutines.CoroutineScope
@@ -54,7 +55,15 @@ class LanDiscovery @Inject constructor(
         while (scope.isActive) {
             runCatching {
                 val pub = identity.loadPublic()
-                val hello = NLJson.encodeToString(LanHello.serializer(), LanHello(deviceId = pub.deviceId, port = serverPort))
+                val hello = NLJson.encodeToString(
+                    LanHello.serializer(),
+                    LanHello(
+                        deviceId = pub.deviceId,
+                        port = serverPort,
+                        edPub = CryptoUtils.b64(pub.edPub),
+                        xPub = CryptoUtils.b64(pub.xPub),
+                    )
+                )
                 val bytes = hello.toByteArray()
                 socket.send(DatagramPacket(bytes, bytes.size, InetAddress.getByName("255.255.255.255"), DISCOVERY_PORT))
             }.onFailure { Log.w(TAG, "lan advertise failed: $it") }
@@ -77,6 +86,8 @@ class LanDiscovery @Inject constructor(
                             host = packet.address.hostAddress ?: return@runCatching,
                             port = hello.port,
                             nickname = hello.nickname,
+                            edPub = hello.edPub,
+                            xPub = hello.xPub,
                         )
                     )
                 }
