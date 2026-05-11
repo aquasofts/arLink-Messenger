@@ -165,6 +165,9 @@ dependencies {
     // SQLCipher 集成预留（默认不启用，Settings 内开关启用后再绑定）
     // implementation(libs.sqlcipher.android)
 
+    // QR encoding core; scanner UI can be added on top later.
+    implementation(libs.zxing.core)
+
     // Tests
     testImplementation(libs.junit)
     testImplementation(libs.truth)

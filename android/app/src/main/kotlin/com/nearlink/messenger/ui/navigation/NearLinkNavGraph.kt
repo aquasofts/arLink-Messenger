@@ -15,6 +15,9 @@ import com.nearlink.messenger.ui.screens.pair.PairScreen
 import com.nearlink.messenger.ui.screens.pair.SafetyNumberScreen
 import com.nearlink.messenger.ui.screens.permission.PermissionScreen
 import com.nearlink.messenger.ui.screens.profile.ProfileScreen
+import com.nearlink.messenger.ui.screens.qr.QrContactScreen
+import com.nearlink.messenger.ui.screens.qr.QrMessageMode
+import com.nearlink.messenger.ui.screens.qr.QrMessageScreen
 import com.nearlink.messenger.ui.screens.settings.SettingsScreen
 
 object Routes {
@@ -27,6 +30,11 @@ object Routes {
     fun safety(deviceId: String) = "safety/$deviceId"
     const val Chat = "chat/{convId}"
     fun chat(convId: String) = "chat/$convId"
+    const val QrContact = "qr/contact"
+    const val QrMessageShow = "qr/message/show/{convId}"
+    fun qrMessageShow(convId: String) = "qr/message/show/$convId"
+    const val QrMessageScan = "qr/message/scan/{convId}"
+    fun qrMessageScan(convId: String) = "qr/message/scan/$convId"
     const val Profile = "profile"
     const val Settings = "settings"
 }
@@ -89,6 +97,36 @@ fun NearLinkNavGraph(startDestination: String = Routes.Onboarding) {
         ) {
             ChatScreen(
                 viewModel = hiltViewModel(),
+                onBack = { nav.popBackStack() },
+                onShowQrMessage = { nav.navigate(Routes.qrMessageShow(it)) },
+                onScanQrMessage = { nav.navigate(Routes.qrMessageScan(it)) },
+                onOpenContactQr = { nav.navigate(Routes.QrContact) },
+            )
+        }
+        composable(Routes.QrContact) {
+            QrContactScreen(
+                viewModel = hiltViewModel(),
+                onBack = { nav.popBackStack() },
+                onImported = { peerDeviceId -> nav.navigate(Routes.safety(peerDeviceId)) },
+            )
+        }
+        composable(
+            Routes.QrMessageShow,
+            arguments = listOf(navArgument("convId") { type = NavType.StringType }),
+        ) {
+            QrMessageScreen(
+                viewModel = hiltViewModel(),
+                mode = QrMessageMode.SHOW,
+                onBack = { nav.popBackStack() },
+            )
+        }
+        composable(
+            Routes.QrMessageScan,
+            arguments = listOf(navArgument("convId") { type = NavType.StringType }),
+        ) {
+            QrMessageScreen(
+                viewModel = hiltViewModel(),
+                mode = QrMessageMode.SCAN,
                 onBack = { nav.popBackStack() },
             )
         }

@@ -21,6 +21,7 @@ media3 = "1.4.1"
 tink = "1.15.0"
 sqlcipher = "4.5.4"
 securityCrypto = "1.1.0-alpha06"
+zxing = "3.5.3"
 junit = "4.13.2"
 junitExt = "1.2.1"
 truth = "1.4.4"
@@ -77,6 +78,7 @@ tink-android = { group = "com.google.crypto.tink", name = "tink-android", versio
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 # test
 junit = { group = "junit", name = "junit", version.ref = "junit" }

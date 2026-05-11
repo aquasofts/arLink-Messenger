@@ -103,6 +103,52 @@ class MessageRepository @Inject constructor(
         return entity.toDomain()
     }
 
+    suspend fun createQrTextEnvelope(convId: String, text: String, replyTo: String? = null): Envelope {
+        val peer = contactRepo.get(convId) ?: error("contact not found: $convId")
+        val pub = identity.loadPublic()
+        val now = System.currentTimeMillis()
+        val msgId = CryptoEngine.newClientMsgId()
+        val plaintext = PlaintextEnvelope(
+            type = "text",
+            clientMsgId = msgId,
+            ts = now,
+            ref = replyTo?.let { PlaintextRef(it) },
+            body = PlaintextBody.Text(text),
+        )
+        val envelope = crypto.seal(
+            selfDeviceId = pub.deviceId,
+            peerDeviceId = peer.deviceId,
+            peerXPub = peer.pkX,
+            convId = convId,
+            clientMsgId = msgId,
+            plaintext = json.encodeToString(plaintext).toByteArray(),
+        )
+        val entity = MessageEntity(
+            id = msgId,
+            convId = convId,
+            senderDeviceId = pub.deviceId,
+            recipientDeviceId = peer.deviceId,
+            type = MessageType.TEXT,
+            status = MessageStatus.PENDING,
+            isOutgoing = true,
+            createdAtMs = now,
+            updatedAtMs = now,
+            replyToId = replyTo,
+            text = text,
+        )
+        msgDao.upsert(entity)
+        convRepo.touchLast(convId, msgId, text.take(80), now, unreadDelta = 0)
+        return envelope
+    }
+
+    suspend fun ingestFromQr(envelope: Envelope): QrIngestResult {
+        val pub = identity.loadPublic()
+        if (envelope.toDeviceId != pub.deviceId) return QrIngestResult.WRONG_RECIPIENT
+        if (msgDao.getById(envelope.clientMsgId) != null) return QrIngestResult.DUPLICATE
+        if (contactRepo.get(envelope.fromDeviceId) == null) return QrIngestResult.UNKNOWN_SENDER
+        return if (ingest(envelope)) QrIngestResult.IMPORTED else QrIngestResult.DECRYPT_FAILED
+    }
+
     /**
      * 单次发送尝试；UseCase 也可以直接调用。
      */
@@ -321,6 +367,8 @@ class MessageRepository @Inject constructor(
         else -> ""
     }
 }
+
+enum class QrIngestResult { IMPORTED, DUPLICATE, UNKNOWN_SENDER, WRONG_RECIPIENT, DECRYPT_FAILED }
 
 internal fun MessageEntity.toDomain(): Message = Message(
     id = id,

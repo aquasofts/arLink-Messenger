@@ -1,6 +1,7 @@
 package com.nearlink.messenger.core.transport
 
 import com.nearlink.messenger.core.bluetooth.BluetoothEngine
+import com.nearlink.messenger.core.lan.LanTransport
 import com.nearlink.messenger.core.network.WebSocketEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -26,6 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class TransportManager @Inject constructor(
     private val bt: BluetoothEngine,
+    private val lan: LanTransport,
     private val ws: WebSocketEngine,
 ) {
 
@@ -36,12 +38,12 @@ class TransportManager @Inject constructor(
 
     init {
         scope.launch {
-            merge(bt.incoming(), ws.incoming())
+            merge(bt.incoming(), lan.incoming(), ws.incoming())
                 .onEach { mergedIncoming.emit(it) }
                 .collect { /* 终止 */ }
         }
         scope.launch {
-            merge(bt.ackEvents(), ws.ackEvents())
+            merge(bt.ackEvents(), lan.ackEvents(), ws.ackEvents())
                 .onEach { mergedAcks.emit(it) }
                 .collect { /* 终止 */ }
         }
@@ -58,6 +60,7 @@ class TransportManager @Inject constructor(
         val channel = pickChannel(envelope.toDeviceId, prefer)
         return when (channel) {
             TransportChannel.BLUETOOTH -> bt.send(envelope)
+            TransportChannel.WIFI_LAN -> lan.send(envelope)
             TransportChannel.SERVER -> ws.send(envelope)
             TransportChannel.AUTO -> {
                 // 双通道都不可用：返回 retryable failure；Repository 会保持 PENDING 等下次。
@@ -72,8 +75,10 @@ class TransportManager @Inject constructor(
     fun pickChannel(peerDeviceId: String, prefer: TransportChannel = TransportChannel.AUTO): TransportChannel {
         // 显式指定：尊重，但若不可用降级到 AUTO 决策
         if (prefer == TransportChannel.BLUETOOTH && bt.isAvailable(peerDeviceId)) return TransportChannel.BLUETOOTH
+        if (prefer == TransportChannel.WIFI_LAN && lan.isAvailable(peerDeviceId)) return TransportChannel.WIFI_LAN
         if (prefer == TransportChannel.SERVER && ws.isAvailable(peerDeviceId)) return TransportChannel.SERVER
         return when {
+            lan.isAvailable(peerDeviceId) -> TransportChannel.WIFI_LAN
             bt.isAvailable(peerDeviceId) -> TransportChannel.BLUETOOTH
             ws.isAvailable(peerDeviceId) -> TransportChannel.SERVER
             else -> TransportChannel.AUTO
@@ -83,6 +88,7 @@ class TransportManager @Inject constructor(
     fun shutdown() {
         scope.cancel()
         bt.shutdown()
+        lan.shutdown()
         ws.disconnect()
     }
 }

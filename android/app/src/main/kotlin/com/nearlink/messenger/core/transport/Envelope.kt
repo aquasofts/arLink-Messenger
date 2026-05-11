@@ -1,7 +1,7 @@
 package com.nearlink.messenger.core.transport
 
 /** 传输通道。同名常量也用作 outbox.preferredChannel。 */
-enum class TransportChannel { BLUETOOTH, SERVER, AUTO }
+enum class TransportChannel { BLUETOOTH, WIFI_LAN, SERVER, AUTO }
 
 /** 传输层投递的载荷：已经是密文。 */
 data class Envelope(

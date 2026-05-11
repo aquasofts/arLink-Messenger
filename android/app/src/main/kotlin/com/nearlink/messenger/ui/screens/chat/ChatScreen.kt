@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -19,10 +20,17 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
+fun ChatScreen(
+    viewModel: ChatViewModel,
+    onBack: () -> Unit,
+    onShowQrMessage: (String) -> Unit,
+    onScanQrMessage: (String) -> Unit,
+    onOpenContactQr: () -> Unit,
+) {
     val state by viewModel.state.collectAsState()
     val messages by viewModel.messages.collectAsState()
     var input by rememberSaveable { mutableStateOf("") }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -38,6 +46,34 @@ fun ChatScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
                 title = { Text(state.title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back") }
+                },
+                actions = {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "more")
+                    }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text("二维码发送信息") },
+                            onClick = {
+                                menuExpanded = false
+                                onShowQrMessage(state.convId)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("二维码获取信息") },
+                            onClick = {
+                                menuExpanded = false
+                                onScanQrMessage(state.convId)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("联系人二维码") },
+                            onClick = {
+                                menuExpanded = false
+                                onOpenContactQr()
+                            },
+                        )
+                    }
                 },
             )
         },

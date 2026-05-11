@@ -22,6 +22,27 @@ class ContactRepository @Inject constructor(
 
     suspend fun upsert(contact: Contact) = dao.upsert(contact.toEntity())
 
+    suspend fun upsertQrContact(contact: Contact): Contact {
+        val existing = get(contact.deviceId)
+        val now = System.currentTimeMillis()
+        val merged = when {
+            existing == null -> contact.copy(createdAtMs = now, updatedAtMs = now, trustState = TrustState.UNVERIFIED)
+            existing.pkIdentity.contentEquals(contact.pkIdentity) && existing.pkX.contentEquals(contact.pkX) -> existing.copy(
+                nickname = contact.nickname,
+                updatedAtMs = now,
+            )
+            else -> existing.copy(
+                nickname = contact.nickname,
+                pkIdentity = contact.pkIdentity,
+                pkX = contact.pkX,
+                trustState = TrustState.CHANGED,
+                updatedAtMs = now,
+            )
+        }
+        dao.upsert(merged.toEntity())
+        return merged
+    }
+
     suspend fun setTrustState(deviceId: String, state: TrustState, now: Long = System.currentTimeMillis()) =
         dao.setTrustState(deviceId, state.name, now)
 

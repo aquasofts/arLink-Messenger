@@ -21,6 +21,7 @@ import com.nearlink.messenger.core.bluetooth.BluetoothEngine
 import com.nearlink.messenger.core.bluetooth.BtHandshake
 import com.nearlink.messenger.core.bluetooth.RfcommServer
 import com.nearlink.messenger.core.crypto.IdentityKeyStore
+import com.nearlink.messenger.core.lan.LanTransport
 import com.nearlink.messenger.core.network.PresenceEvent
 import com.nearlink.messenger.core.network.WebSocketEngine
 import com.nearlink.messenger.core.permissions.BluetoothPermissions
@@ -57,6 +58,7 @@ import javax.inject.Inject
 class NearLinkForegroundService : Service() {
 
     @Inject lateinit var ws: WebSocketEngine
+    @Inject lateinit var lan: LanTransport
     @Inject lateinit var bt: BluetoothEngine
     @Inject lateinit var server: RfcommServer
     @Inject lateinit var advertiser: BleAdvertiser
@@ -136,7 +138,10 @@ class NearLinkForegroundService : Service() {
             }
         }
 
-        // 5) BLE 广播 + RFCOMM 接听（按权限/适配器存在性）
+        // 5) LAN Wi-Fi / hotspot encrypted transport
+        lan.start()
+
+        // 6) BLE 广播 + RFCOMM 接听（按权限/适配器存在性）
         startBluetoothEdge()
     }
 
@@ -189,6 +194,7 @@ class NearLinkForegroundService : Service() {
     override fun onDestroy() {
         scope.cancel()
         runCatching { advertiser.stop() }
+        runCatching { lan.shutdown() }
         runCatching { server.shutdown() }
         super.onDestroy()
     }
