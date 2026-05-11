@@ -12,8 +12,9 @@ import com.nearlink.messenger.core.protocol.WirePullOffline
 import com.nearlink.messenger.core.protocol.WirePullOfflineChunk
 import com.nearlink.messenger.core.protocol.WireServerHello
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.UUID
@@ -49,7 +50,7 @@ class WsMessageCodec @Inject constructor() {
 
     fun buildPresenceSub(from: String, deviceIds: List<String>): WireFrame {
         val obj = buildJsonObject {
-            put("device_ids", NLJson.encodeToJsonElement(deviceIds))
+            put("device_ids", JsonArray(deviceIds.map(::JsonPrimitive)))
         }
         return WireFrame(
             type = WireFrameTypes.PRESENCE_SUB,

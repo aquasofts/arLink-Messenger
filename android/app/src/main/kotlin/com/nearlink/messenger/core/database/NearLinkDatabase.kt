@@ -23,7 +23,7 @@ import com.nearlink.messenger.data.local.entity.OutboxEntity
         OutboxEntity::class,
     ],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 @TypeConverters(RoomConverters::class)
 abstract class NearLinkDatabase : RoomDatabase() {
