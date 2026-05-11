@@ -131,6 +131,7 @@ tag 含 `-rc` / `-beta` / `-alpha` 会自动标记为 **prerelease**。
 | `Permission denied to ghcr.io` | 确认仓库 Settings → Actions → *Workflow permissions* 是 **Read and write** |
 | Docker 多架构 build 特别慢 | arm64 走的是 QEMU 模拟；要快就加 `runs-on: ubuntu-24.04-arm`（预览期或企业版）或用 matrix 拆两个 job |
 | Android 构建 `Could not find gradle-wrapper.jar` | workflow 里已有自动 `gradle wrapper` 生成步骤；只在极个别 checkout 异常会出现。重跑一次 |
+| Android `kspDebugKotlin FAILED: KSTypeArgument.type should not have been null` | KSP2 + Hilt 2.51 在 `@Binds` 通配类型上的 bug。`gradle.properties` 里设 `ksp.useKSP2=false`（本仓库默认已关）。后续等 Hilt ≥ 2.53 + KSP2 都成熟再切回。 |
 | Release 里 APK 名字不对 | 改 `release.yml` 的 `out="out/nearlink-$tag.apk"` |
 | 我只想手动打包，不想每次 push 都跑 | 改 `on:` 只留 `workflow_dispatch`；现成三个 workflow 都支持手动触发 |
 
