@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import com.nearlink.messenger.R
 import com.nearlink.messenger.core.permissions.BluetoothPermissions
 import com.nearlink.messenger.core.permissions.PermissionHelper
-import com.nearlink.messenger.service.NearLinkForegroundService
 
 @Composable
 fun PermissionScreen(onDone: () -> Unit) {
@@ -28,7 +27,6 @@ fun PermissionScreen(onDone: () -> Unit) {
     var granted by remember { mutableStateOf(PermissionHelper.allGranted(context, BluetoothPermissions.runtime)) }
 
     fun continueIntoApp() {
-        NearLinkForegroundService.start(context)
         onDone()
     }
 
