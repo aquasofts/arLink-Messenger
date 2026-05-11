@@ -1,5 +1,6 @@
 package com.nearlink.messenger.core.transport
 
+import android.annotation.SuppressLint
 import com.nearlink.messenger.core.bluetooth.BluetoothEngine
 import com.nearlink.messenger.core.lan.LanTransport
 import com.nearlink.messenger.core.network.WebSocketEngine
@@ -56,6 +57,7 @@ class TransportManager @Inject constructor(
      * 选择通道并发送一次。返回的流会先发出 Sent/Queued/Failed 之一。
      * Delivered 会通过 [ackEvents] 异步到达。
      */
+    @SuppressLint("MissingPermission")
     suspend fun send(envelope: Envelope, prefer: TransportChannel = TransportChannel.AUTO): Flow<DeliveryAck> {
         val channel = pickChannel(envelope.toDeviceId, prefer)
         return when (channel) {
