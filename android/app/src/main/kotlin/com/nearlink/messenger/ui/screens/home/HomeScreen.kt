@@ -12,6 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
@@ -24,8 +27,45 @@ fun HomeScreen(
     onOpenProfile: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenPair: () -> Unit,
+    onOpenQrContact: () -> Unit,
+    onOpenHotspotPair: () -> Unit,
 ) {
     val conversations by viewModel.conversations.collectAsState()
+    var showAddSheet by remember { mutableStateOf(false) }
+
+    if (showAddSheet) {
+        ModalBottomSheet(onDismissRequest = { showAddSheet = false }) {
+            Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Text("添加联系人", style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(8.dp))
+                ListItem(
+                    headlineContent = { Text("通过二维码添加") },
+                    supportingContent = { Text("扫描或展示联系人二维码，交换密钥后确认安全码") },
+                    modifier = Modifier.clickable {
+                        showAddSheet = false
+                        onOpenQrContact()
+                    },
+                )
+                ListItem(
+                    headlineContent = { Text("通过热点 / 局域网添加") },
+                    supportingContent = { Text("连接同一 Wi‑Fi 或热点后通过局域网发现附近设备") },
+                    modifier = Modifier.clickable {
+                        showAddSheet = false
+                        onOpenHotspotPair()
+                    },
+                )
+                ListItem(
+                    headlineContent = { Text("通过蓝牙添加") },
+                    supportingContent = { Text("使用 BLE 扫描与蓝牙连接添加附近设备") },
+                    modifier = Modifier.clickable {
+                        showAddSheet = false
+                        onOpenPair()
+                    },
+                )
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -38,7 +78,7 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onOpenPair) { Icon(Icons.Default.Add, contentDescription = "新增联系人") }
+            FloatingActionButton(onClick = { showAddSheet = true }) { Icon(Icons.Default.Add, contentDescription = "新增联系人") }
         }
     ) { padding ->
         if (conversations.isEmpty()) {
@@ -46,7 +86,7 @@ fun HomeScreen(
                 Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
                     Text("还没有聊天", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-                    Text("点 + 通过蓝牙添加附近的好友", color = MaterialTheme.colorScheme.outline)
+                    Text("点 + 选择二维码、热点/局域网或蓝牙添加好友", color = MaterialTheme.colorScheme.outline)
                 }
             }
         } else {

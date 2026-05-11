@@ -62,6 +62,8 @@ fun NearLinkNavGraph(startDestination: String = Routes.Onboarding) {
                 onOpenProfile = { nav.navigate(Routes.Profile) },
                 onOpenSettings = { nav.navigate(Routes.Settings) },
                 onOpenPair = { nav.navigate(Routes.Pair) },
+                onOpenQrContact = { nav.navigate(Routes.QrContact) },
+                onOpenHotspotPair = { nav.navigate(Routes.Pair) },
             )
         }
         composable(Routes.Contacts) {

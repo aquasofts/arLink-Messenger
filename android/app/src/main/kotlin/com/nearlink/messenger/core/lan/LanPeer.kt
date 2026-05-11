@@ -9,6 +9,8 @@ data class LanPeer(
     val host: String,
     val port: Int,
     val nickname: String? = null,
+    @SerialName("ed_pub") val edPub: String? = null,
+    @SerialName("x_pub") val xPub: String? = null,
     @SerialName("last_seen_ms") val lastSeenMs: Long = System.currentTimeMillis(),
 )
 
