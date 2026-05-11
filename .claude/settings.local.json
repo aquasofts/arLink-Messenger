@@ -4,7 +4,18 @@
       "Bash(./gradlew :app:testDebugUnitTest *)",
       "Bash(gradle wrapper *)",
       "Bash(unzip -q -o \"gradle-8.14.5-all.zip\" -d \".claude/gradle\")",
-      "Bash(\".claude/gradle/gradle-8.14.5/bin/gradle\" -p \"android\" :app:lintDebug --continue)"
+      "Bash(\".claude/gradle/gradle-8.14.5/bin/gradle\" -p \"android\" :app:lintDebug --continue)",
+      "Bash(rm -rf \".claude/jdk\")",
+      "Bash(unzip -q -o \"jdk-21.0.10_windows-x64_bin.zip\" -d \".claude/jdk\")",
+      "Bash(export JAVA_HOME=\"$PWD/.claude/jdk/jdk-21.0.10\")",
+      "Bash(export PATH=\"$JAVA_HOME/bin:$PATH\")",
+      "Bash(\".claude/jdk/jdk-21.0.10/bin/java.exe\" -version)",
+      "Bash(\".claude/gradle/gradle-8.14.5/bin/gradle.bat\" -v)",
+      "Bash(cmd.exe /c \".claude\\\\\\\\gradle\\\\\\\\gradle-8.14.5\\\\\\\\bin\\\\\\\\gradle.bat -p android :app:lintDebug --continue\")",
+      "Bash(cmd.exe /c \"\\\\\".claude\\\\\\\\gradle\\\\\\\\gradle-8.14.5\\\\\\\\bin\\\\\\\\gradle.bat\\\\\" -p \\\\\"android\\\\\" :app:lintDebug --continue\")",
+      "Bash(cmd.exe *)",
+      "Bash(export JAVA_HOME=\"$\\(pwd\\)/.claude/jdk/jdk-21.0.10\")",
+      "Bash(bash -x \".claude/gradle/gradle-8.14.5/bin/gradle\" -p \"android\" :app:lintDebug --continue)"
     ]
   }
 }

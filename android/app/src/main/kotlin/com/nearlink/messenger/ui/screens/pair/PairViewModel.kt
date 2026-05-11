@@ -55,6 +55,7 @@ class PairViewModel @Inject constructor(
             .onFailure { _state.value = _state.value.copy(error = it.message) }
     }
 
+    @SuppressLint("MissingPermission")
     fun stopAdvertising() = discover.stopAdvertising()
 
     @SuppressLint("MissingPermission")
