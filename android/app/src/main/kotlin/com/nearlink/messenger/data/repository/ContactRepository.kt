@@ -26,9 +26,10 @@ class ContactRepository @Inject constructor(
         val existing = get(contact.deviceId)
         val now = System.currentTimeMillis()
         val merged = when {
-            existing == null -> contact.copy(createdAtMs = now, updatedAtMs = now, trustState = TrustState.UNVERIFIED)
+            existing == null -> contact.copy(createdAtMs = now, updatedAtMs = now, trustState = TrustState.VERIFIED)
             existing.pkIdentity.contentEquals(contact.pkIdentity) && existing.pkX.contentEquals(contact.pkX) -> existing.copy(
                 nickname = contact.nickname,
+                trustState = TrustState.VERIFIED,
                 updatedAtMs = now,
             )
             else -> existing.copy(

@@ -109,7 +109,7 @@ fun NearLinkNavGraph(startDestination: String = Routes.Onboarding) {
             QrContactScreen(
                 viewModel = hiltViewModel(),
                 onBack = { nav.popBackStack() },
-                onImported = { peerDeviceId -> nav.navigate(Routes.safety(peerDeviceId)) },
+                onImported = { convId -> nav.navigate(Routes.chat(convId)) },
             )
         }
         composable(

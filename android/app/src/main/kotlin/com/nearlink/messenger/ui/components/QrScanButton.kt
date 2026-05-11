@@ -39,7 +39,7 @@ fun QrScanButton(
                     .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
                     .setPrompt("扫描 NearLink 二维码")
                     .setBeepEnabled(false)
-                    .setOrientationLocked(false)
+                    .setOrientationLocked(true)
             )
         }
     }

@@ -48,7 +48,7 @@ class QrContactViewModel @Inject constructor(
             }
             val saved = contacts.upsertQrContact(contact)
             conversations.ensureForPeer(saved.deviceId, saved.nickname)
-            _state.value = _state.value.copy(status = "已导入联系人：${saved.nickname}")
+            _state.value = _state.value.copy(status = "已添加联系人：${saved.nickname}")
             onImported(saved.deviceId)
         }
     }
