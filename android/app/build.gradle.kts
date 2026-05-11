@@ -156,10 +156,8 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
 
-    // Crypto: Tink (default) + lazysodium (XChaCha20-Poly1305)
+    // Crypto: Tink（AEAD + 签名/ECDH 全部用 Tink subtle，零 JNI 依赖）
     implementation(libs.tink.android)
-    implementation(libs.lazysodium.android)
-    implementation(libs.jna) { artifact { type = "aar" } }
 
     // Jetpack Security: EncryptedFile 包裹长期私钥（IdentityKeyStore 使用）
     implementation(libs.androidx.security.crypto)

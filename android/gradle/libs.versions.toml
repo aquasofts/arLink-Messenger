@@ -19,8 +19,6 @@ okhttp = "4.12.0"
 coil = "2.7.0"
 media3 = "1.4.1"
 tink = "1.15.0"
-lazysodium = "5.1.4"
-jna = "5.13.0"
 sqlcipher = "4.5.4"
 securityCrypto = "1.1.0-alpha06"
 junit = "4.13.2"
@@ -75,8 +73,6 @@ media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", versi
 media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 
 tink-android = { group = "com.google.crypto.tink", name = "tink-android", version.ref = "tink" }
-lazysodium-android = { group = "com.goterl", name = "lazysodium-android", version.ref = "lazysodium" }
-jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
 
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 
