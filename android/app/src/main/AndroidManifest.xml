@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
     <!-- 旧版扫描需要定位；本 App 不消费 location，仅形式上声明 -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30" />
 
