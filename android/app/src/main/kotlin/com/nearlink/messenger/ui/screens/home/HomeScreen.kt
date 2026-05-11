@@ -32,8 +32,8 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("NearLink") },
                 actions = {
-                    IconButton(onClick = onOpenContacts) { Icon(Icons.Default.Person, contentDescription = null) }
-                    IconButton(onClick = onOpenSettings) { Icon(Icons.Default.Settings, contentDescription = null) }
+                    IconButton(onClick = onOpenContacts) { Icon(Icons.Default.Person, contentDescription = "contacts") }
+                    IconButton(onClick = onOpenSettings) { Icon(Icons.Default.Settings, contentDescription = "settings") }
                 },
             )
         },

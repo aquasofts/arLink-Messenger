@@ -20,16 +20,23 @@ import androidx.compose.ui.unit.dp
 import com.nearlink.messenger.R
 import com.nearlink.messenger.core.permissions.BluetoothPermissions
 import com.nearlink.messenger.core.permissions.PermissionHelper
+import com.nearlink.messenger.service.NearLinkForegroundService
 
 @Composable
 fun PermissionScreen(onDone: () -> Unit) {
     val context = LocalContext.current
     var granted by remember { mutableStateOf(PermissionHelper.allGranted(context, BluetoothPermissions.runtime)) }
 
+    fun continueIntoApp() {
+        NearLinkForegroundService.start(context)
+        onDone()
+    }
+
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { result ->
         granted = result.values.all { it }
+        if (granted) continueIntoApp()
     }
 
     Column(
@@ -51,7 +58,7 @@ fun PermissionScreen(onDone: () -> Unit) {
 
         if (granted) {
             Spacer(Modifier.height(24.dp))
-            Button(onClick = onDone) { Text("继续") }
+            Button(onClick = ::continueIntoApp) { Text("继续") }
         }
     }
 }

@@ -24,7 +24,7 @@ fun ProfileScreen(viewModel: ProfileViewModel, onBack: () -> Unit) {
             TopAppBar(
                 title = { Text("我") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back") }
                 },
             )
         }

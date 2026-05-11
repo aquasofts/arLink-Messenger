@@ -37,7 +37,7 @@ fun ChatScreen(viewModel: ChatViewModel, onBack: () -> Unit) {
             TopAppBar(
                 title = { Text(state.title) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back") }
                 },
             )
         },

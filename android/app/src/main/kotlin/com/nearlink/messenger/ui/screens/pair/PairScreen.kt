@@ -32,7 +32,7 @@ fun PairScreen(
             TopAppBar(
                 title = { Text("附近设备") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back") }
                 },
             )
         }

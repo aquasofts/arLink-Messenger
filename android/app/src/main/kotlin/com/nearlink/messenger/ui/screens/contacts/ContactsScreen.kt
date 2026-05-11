@@ -28,12 +28,12 @@ fun ContactsScreen(
             TopAppBar(
                 title = { Text("联系人") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back") }
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onPair) { Icon(Icons.Default.Add, contentDescription = null) }
+            FloatingActionButton(onClick = onPair) { Icon(Icons.Default.Add, contentDescription = "add contact") }
         }
     ) { padding ->
         LazyColumn(Modifier.padding(padding).fillMaxSize()) {

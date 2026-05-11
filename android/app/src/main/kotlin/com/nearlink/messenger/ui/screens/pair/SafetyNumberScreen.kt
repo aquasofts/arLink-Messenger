@@ -29,7 +29,7 @@ fun SafetyNumberScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.pair_safety_title)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "back") }
                 },
             )
         }
