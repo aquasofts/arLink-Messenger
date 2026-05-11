@@ -27,6 +27,7 @@ class SettingsStore @Inject constructor(
         val LAST_SYNCED_TS = longPreferencesKey("last_synced_ts")
         val DB_ENCRYPTION = booleanPreferencesKey("db_encryption_enabled")
         val ONBOARDED = booleanPreferencesKey("onboarded")
+        val PERMISSION_PROMPT_SEEN = booleanPreferencesKey("permission_prompt_seen")
     }
 
     val serverUrl: Flow<String?> = store.data.map { it[Keys.SERVER_URL] }
@@ -35,6 +36,7 @@ class SettingsStore @Inject constructor(
     val lastSyncedTs: Flow<Long> = store.data.map { it[Keys.LAST_SYNCED_TS] ?: 0L }
     val dbEncryptionEnabled: Flow<Boolean> = store.data.map { it[Keys.DB_ENCRYPTION] ?: false }
     val onboarded: Flow<Boolean> = store.data.map { it[Keys.ONBOARDED] ?: false }
+    val permissionPromptSeen: Flow<Boolean> = store.data.map { it[Keys.PERMISSION_PROMPT_SEEN] ?: false }
 
     suspend fun setServerUrl(url: String?) = store.edit {
         if (url.isNullOrBlank()) it.remove(Keys.SERVER_URL) else it[Keys.SERVER_URL] = url
@@ -46,4 +48,5 @@ class SettingsStore @Inject constructor(
     suspend fun setLastSyncedTs(ts: Long) = store.edit { it[Keys.LAST_SYNCED_TS] = ts }
     suspend fun setDbEncryption(enabled: Boolean) = store.edit { it[Keys.DB_ENCRYPTION] = enabled }
     suspend fun setOnboarded(v: Boolean) = store.edit { it[Keys.ONBOARDED] = v }
+    suspend fun setPermissionPromptSeen(v: Boolean) = store.edit { it[Keys.PERMISSION_PROMPT_SEEN] = v }
 }

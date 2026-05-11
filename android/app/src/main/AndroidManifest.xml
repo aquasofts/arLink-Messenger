@@ -39,6 +39,7 @@
 
     <!-- 扫描二维码 -->
     <uses-permission android:name="android.permission.CAMERA" />
+ <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- 自启动恢复连接（可选） -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

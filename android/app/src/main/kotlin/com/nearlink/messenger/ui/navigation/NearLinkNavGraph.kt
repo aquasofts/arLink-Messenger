@@ -46,7 +46,7 @@ fun NearLinkNavGraph(startDestination: String = Routes.Onboarding) {
         composable(Routes.Onboarding) {
             OnboardingScreen(
                 viewModel = hiltViewModel(),
-                onDone = { nav.navigate(Routes.Permission) { popUpTo(Routes.Onboarding) { inclusive = true } } },
+                onDone = { nav.navigate(Routes.Home) { popUpTo(Routes.Onboarding) { inclusive = true } } },
             )
         }
         composable(Routes.Permission) {

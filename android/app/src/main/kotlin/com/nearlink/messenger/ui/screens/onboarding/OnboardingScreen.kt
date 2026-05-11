@@ -26,6 +26,7 @@ import javax.inject.Inject
 data class OnboardingUiState(
     val deviceId: String? = null,
     val ready: Boolean = false,
+    val onboarded: Boolean = false,
 )
 
 @HiltViewModel
@@ -38,8 +39,9 @@ class OnboardingViewModel @Inject constructor(
 
     fun bootstrap() {
         viewModelScope.launch {
+            val alreadyOnboarded = identity.isOnboarded()
             val pub = identity.bootstrap()
-            _state.value = OnboardingUiState(deviceId = pub.deviceId, ready = true)
+            _state.value = OnboardingUiState(deviceId = pub.deviceId, ready = true, onboarded = alreadyOnboarded)
         }
     }
 
@@ -55,6 +57,9 @@ fun OnboardingScreen(
 ) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) { viewModel.bootstrap() }
+    LaunchedEffect(state.ready, state.onboarded) {
+        if (state.ready && state.onboarded) onDone()
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),

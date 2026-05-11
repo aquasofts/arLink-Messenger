@@ -58,12 +58,14 @@ class QrMessageViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val status = when (messages.ingestFromQr(envelope)) {
+            val result = runCatching { messages.ingestFromQr(envelope) }.getOrNull()
+            val status = when (result) {
                 QrIngestResult.IMPORTED -> "已导入消息"
                 QrIngestResult.DUPLICATE -> "消息已存在"
                 QrIngestResult.UNKNOWN_SENDER -> "未知发送者，请先导入联系人二维码"
                 QrIngestResult.WRONG_RECIPIENT -> "这条消息不是发给本机的"
                 QrIngestResult.DECRYPT_FAILED -> "解密失败或密文被篡改"
+                null -> "导入失败，密文格式或本地会话状态异常"
             }
             _state.value = _state.value.copy(status = status)
         }

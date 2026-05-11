@@ -15,6 +15,7 @@ class SettingsRepository @Inject constructor(
     val serverUrl: Flow<String?> get() = store.serverUrl
     val dbEncryptionEnabled: Flow<Boolean> get() = store.dbEncryptionEnabled
     val lastSyncedTs: Flow<Long> get() = store.lastSyncedTs
+    val permissionPromptSeen: Flow<Boolean> get() = store.permissionPromptSeen
 
     suspend fun setServerUrl(url: String?) {
         store.setServerUrl(url)
@@ -28,4 +29,5 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setLastSyncedTs(ts: Long) = store.setLastSyncedTs(ts)
     suspend fun setDbEncryption(enabled: Boolean) = store.setDbEncryption(enabled)
+    suspend fun setPermissionPromptSeen(v: Boolean) = store.setPermissionPromptSeen(v)
 }
