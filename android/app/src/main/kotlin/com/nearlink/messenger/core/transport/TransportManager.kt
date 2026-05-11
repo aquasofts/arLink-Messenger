@@ -1,6 +1,5 @@
 package com.nearlink.messenger.core.transport
 
-import android.util.Log
 import com.nearlink.messenger.core.bluetooth.BluetoothEngine
 import com.nearlink.messenger.core.network.WebSocketEngine
 import kotlinx.coroutines.CoroutineScope
@@ -57,12 +56,11 @@ class TransportManager @Inject constructor(
      */
     suspend fun send(envelope: Envelope, prefer: TransportChannel = TransportChannel.AUTO): Flow<DeliveryAck> {
         val channel = pickChannel(envelope.toDeviceId, prefer)
-        Log.d(TAG, "send msg=${envelope.clientMsgId} channel=$channel")
         return when (channel) {
             TransportChannel.BLUETOOTH -> bt.send(envelope)
             TransportChannel.SERVER -> ws.send(envelope)
             TransportChannel.AUTO -> {
-                // AUTO 不应到达这里；pickChannel 已强制具体值或返回 AUTO 表示双 fail
+                // 双通道都不可用：返回 retryable failure；Repository 会保持 PENDING 等下次。
                 kotlinx.coroutines.flow.flowOf(
                     DeliveryAck.Failed(envelope.clientMsgId, "no_channel_available", retryable = true)
                 )
@@ -87,6 +85,4 @@ class TransportManager @Inject constructor(
         bt.shutdown()
         ws.disconnect()
     }
-
-    companion object { private const val TAG = "TransportManager" }
 }

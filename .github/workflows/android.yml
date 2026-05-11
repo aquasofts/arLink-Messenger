@@ -55,8 +55,6 @@ jobs:
       - name: Set up Gradle (with cache)
         uses: gradle/actions/setup-gradle@v4
         with:
-          # 我们下面会先 `gradle wrapper` 把 wrapper 生成出来；
-          # setup-gradle 默认会在 gradle/wrapper/ 存在时启用 wrapper-cache，这里先关掉以免首次 miss。
           cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
 
       - name: Generate Gradle wrapper (first time only)
@@ -73,8 +71,22 @@ jobs:
       - name: Unit tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
+      # 测试失败时把 JUnit XML / 文本输出直接 cat 进 CI 日志，
+      # 这样定位失败用例不需要下载 artifact。
+      - name: Dump unit test reports on failure
+        if: failure()
+        run: |
+          echo "================== JUnit XML ==================="
+          find app/build/test-results/testDebugUnitTest -name "*.xml" -print -exec cat {} \; 2>/dev/null || true
+          echo ""
+          echo "================== Stdout/Stderr tail =========="
+          find app/build/reports/tests/testDebugUnitTest -name "index.html" | head -3 || true
+          for d in app/build/test-results/testDebugUnitTest; do
+            [ -d "$d" ] || continue
+            find "$d" -name "*.txt" -print -exec cat {} \; 2>/dev/null || true
+          done
+
       - name: Lint (debug)
-        # 不让 lint 阻塞 CI：--continue + 即便失败也上传报告
         continue-on-error: true
         run: ./gradlew :app:lintDebug --continue
 
@@ -101,7 +113,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-unit-test-reports-${{ github.run_number }}
-          path: android/app/build/reports/tests/testDebugUnitTest
+          path: |
+            android/app/build/reports/tests/testDebugUnitTest
+            android/app/build/test-results/testDebugUnitTest
           if-no-files-found: ignore
           retention-days: 7
 

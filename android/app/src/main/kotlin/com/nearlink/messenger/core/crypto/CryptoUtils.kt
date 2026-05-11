@@ -1,16 +1,22 @@
 package com.nearlink.messenger.core.crypto
 
-import android.util.Base64
 import java.security.MessageDigest
+import java.util.Base64 as JBase64
 
-/** 加密模块共用的字节工具。所有 Base64 一律 URL-safe, no-padding。 */
+/**
+ * 加密模块共用的字节工具。所有 Base64 一律 URL-safe, no-padding。
+ *
+ * 用 java.util.Base64 而非 android.util.Base64，是为了 JVM 单测可直接运行
+ * （单元测试默认跑 unitTests.returnDefaultValues 模式，android.util.* 会得到 null）。
+ */
 object CryptoUtils {
 
-    private const val B64_FLAGS = Base64.NO_WRAP or Base64.NO_PADDING or Base64.URL_SAFE
+    private val B64_ENC = JBase64.getUrlEncoder().withoutPadding()
+    private val B64_DEC = JBase64.getUrlDecoder()
 
-    fun b64(bytes: ByteArray): String = Base64.encodeToString(bytes, B64_FLAGS)
+    fun b64(bytes: ByteArray): String = B64_ENC.encodeToString(bytes)
 
-    fun unb64(s: String): ByteArray = Base64.decode(s, B64_FLAGS)
+    fun unb64(s: String): ByteArray = B64_DEC.decode(s)
 
     fun sha256(vararg parts: ByteArray): ByteArray {
         val md = MessageDigest.getInstance("SHA-256")
