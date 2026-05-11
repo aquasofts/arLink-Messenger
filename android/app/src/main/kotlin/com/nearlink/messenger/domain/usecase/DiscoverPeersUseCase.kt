@@ -24,6 +24,7 @@ class DiscoverPeersUseCase @Inject constructor(
         advertiser.start(pub.edPub)
     }
 
+    @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_ADVERTISE])
     fun stopAdvertising() = advertiser.stop()
 
     @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_SCAN])
