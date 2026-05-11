@@ -4,12 +4,12 @@
 
 ## 1. 算法选型
 
-| 用途 | 首选 | 回退 |
-|------|------|------|
-| 身份签名 | **Ed25519**（libsodium / Tink） | java.security `Ed25519`（API 24+） |
-| 密钥协商 | **X25519** ECDH | — |
-| KDF | **HKDF-SHA256** | — |
-| AEAD | **XChaCha20-Poly1305** (24B nonce) | AES-256-GCM (12B nonce, Tink) |
+| 用途 | 当前实现 | 备注 |
+|------|----------|------|
+| 身份签名 | **Ed25519**（Tink subtle） | 32B seed |
+| 密钥协商 | **X25519** ECDH（Tink subtle） | 与 Ed 密钥彼此独立 |
+| KDF | **HKDF-SHA256** | JDK HmacSHA256 |
+| AEAD | **AES-256-GCM** (12B nonce, 16B tag, Tink/JCE) | XChaCha20-Poly1305 列入 roadmap |
 | 哈希 | SHA-256 / SHA-512 | — |
 | 安全码 | SHA-512 → 30 位十进制截断 | — |
 
@@ -68,9 +68,9 @@ mk         = HKDF(salt = root_key,
                   ikm  = shared_eph,
                   info = "NL-MSG-v1" ‖ client_msg_id,
                   len  = 32)
-nonce      = random(24)                        // XChaCha
+nonce      = random(12)                        // AES-GCM
 aad        = utf8(from ‖ to ‖ conv_id ‖ client_msg_id)
-ct         = XChaCha20-Poly1305.encrypt(mk, nonce, aad, plaintext)
+ct         = AES-256-GCM.encrypt(mk, nonce, aad, plaintext)
 wire = { epk, nonce, ct, aad-implicit }
 擦除 esk, mk
 ```
@@ -80,7 +80,7 @@ wire = { epk, nonce, ct, aad-implicit }
 ```
 shared_eph = X25519(sk_x_self, epk_from_wire)
 mk         = HKDF(root_key, shared_eph, "NL-MSG-v1" ‖ client_msg_id, 32)
-plaintext  = XChaCha20-Poly1305.decrypt(mk, nonce, aad, ct)
+plaintext  = AES-256-GCM.decrypt(mk, nonce, aad, ct)
 擦除 mk
 ```
 

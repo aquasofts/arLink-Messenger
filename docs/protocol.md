@@ -86,7 +86,7 @@ Client                                Server
   "to_device_id": "<peer_device_id>",
   "kind": "encrypted",                   // 永远是 encrypted；type 由密文内部决定
   "alg":  "xchacha20poly1305",           // 或 aes-256-gcm
-  "nonce_b64": "...",                    // 24B (XChaCha) / 12B (GCM)
+  "nonce_b64": "...",                    // 12B (GCM)；XChaCha (24B) 列入 roadmap
   "ephemeral_pub_b64": "...",            // X25519 ephemeral
   "ciphertext_b64": "...",               // 含 type + body 的密封
   "aad_b64": "...",                      // = from‖to‖conv_id‖client_msg_id

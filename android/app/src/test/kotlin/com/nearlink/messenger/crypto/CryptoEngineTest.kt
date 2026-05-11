@@ -7,8 +7,8 @@ import com.nearlink.messenger.core.crypto.Hkdf
 import org.junit.Test
 
 /**
- * 注：libsodium 的 .so 在 JVM 单测里不一定可用，所以这里只测纯 JCE 的 AesGcmCipher 与 HKDF。
- * 真机 instrumented 测试再覆盖 XChaChaPolyCipher。
+ * 注：当前 AEAD 唯一实现是 AesGcmCipher（JCE）；HKDF 用 JDK HmacSHA256。
+ * 不依赖任何 native 库，JVM 单测可直接运行。
  */
 class CryptoEngineTest {
 

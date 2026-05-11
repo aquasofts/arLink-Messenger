@@ -30,11 +30,6 @@
 -keep class com.google.crypto.tink.proto.** { *; }
 -dontwarn com.google.crypto.tink.proto.**
 
-# Lazysodium / JNA
--keep class com.sun.jna.** { *; }
--keep class com.goterl.lazysodium.** { *; }
--dontwarn com.sun.jna.**
-
 # Compose tooling on release
 -dontwarn androidx.compose.ui.tooling.**
 

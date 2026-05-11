@@ -34,16 +34,16 @@ class CryptoEngine @Inject constructor(
         clientMsgId: String,
         plaintext: ByteArray,
     ): Envelope {
-        // ephemeral keypair
-        val eph = Ed25519X25519.generate()  // 生成一对，但只用 x 部分
+        // 一次性 ephemeral X25519 keypair
+        val eph = Ed25519X25519.generate()
         val ephPub = eph.xPub
-        val ephSk = eph.xSk
+        val ephPriv = eph.xPriv
         try {
             val rootShared = identity.dh(peerXPub)
             val rootKey = deriver.rootKey(selfDeviceId, peerDeviceId, rootShared)
             CryptoUtils.wipe(rootShared)
 
-            val ephShared = Ed25519X25519.dh(ephSk, peerXPub)
+            val ephShared = Ed25519X25519.dh(ephPriv, peerXPub)
             val messageKey = deriver.messageKey(rootKey, ephShared, clientMsgId)
             CryptoUtils.wipe(rootKey, ephShared)
 
@@ -52,8 +52,8 @@ class CryptoEngine @Inject constructor(
             val ct = aead.seal(messageKey, nonce, aad, plaintext)
             CryptoUtils.wipe(messageKey)
 
-            // 长期私钥也要擦除（DH 已 clone，这里只擦 eph）
-            CryptoUtils.wipe(eph.edSk, eph.edPub)
+            // 一次性 Ed25519 部分这里用不上，但仍然擦掉
+            CryptoUtils.wipe(eph.edPriv)
 
             return Envelope(
                 clientMsgId = clientMsgId,
@@ -68,7 +68,7 @@ class CryptoEngine @Inject constructor(
                 createdAtMs = System.currentTimeMillis(),
             )
         } finally {
-            CryptoUtils.wipe(ephSk)
+            CryptoUtils.wipe(ephPriv)
         }
     }
 

@@ -18,7 +18,7 @@ cd android
 |------|----|------|
 | 设备 ID 生成 | `IdentityKeyStore` 派生规则 | `DeviceIdTest.kt` |
 | 安全码对称 | `SafetyNumber.compute` | `SafetyNumberTest.kt` |
-| AEAD 往返 | `XChaChaPolyCipher`、`AesGcmCipher` | `CryptoEngineTest.kt` |
+| AEAD 往返 | `AesGcmCipher` | `CryptoEngineTest.kt` |
 | 解密 AAD 篡改失败 | 同上 | 同上 |
 | 消息去重 | `MessageDao.insertWithDedup` | `MessageDedupTest.kt`（androidTest） |
 | 通道选择 | `TransportManager.pickChannel` | `TransportManagerTest.kt` |

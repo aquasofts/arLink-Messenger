@@ -1,8 +1,10 @@
 package com.nearlink.messenger.core.crypto
 
 /**
- * AEAD 抽象。默认实现 [XChaChaPolyCipher]（libsodium）与 [AesGcmCipher]（Tink）二选一。
- * Key 长度固定 32B。Nonce 长度由具体实现决定（XChaCha=24, GCM=12）。
+ * AEAD 抽象。当前实现：[AesGcmCipher]（JCE AES-256-GCM）。
+ * Key 长度固定 32B。Nonce 长度由具体实现决定（GCM=12）。
+ *
+ * 未来扩展：XChaCha20-Poly1305 将通过 Tink AeadKeyTemplates 引入，无需再加任何 native 依赖。
  */
 interface AeadCipher {
     val alg: String

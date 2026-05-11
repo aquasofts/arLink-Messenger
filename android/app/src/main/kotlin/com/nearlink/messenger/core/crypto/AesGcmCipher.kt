@@ -8,7 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * AES-256-GCM（12B nonce、16B tag）。作为 lazysodium 不可用时的纯 JCE 回退。
+ * AES-256-GCM（12B nonce、16B tag）。本工程当前唯一的 AEAD 实现。
  */
 @Singleton
 class AesGcmCipher @Inject constructor() : AeadCipher {

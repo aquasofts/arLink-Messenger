@@ -87,7 +87,7 @@
 
 1. 双方握手生成会话：X25519 ECDH(staticA, staticB) → HKDF → root_key。
 2. 发送侧每条消息一个 epheremal X25519 sender_ephemeral 与对端静态键再 ECDH，配合 root_key 派生 message_key（轻量"双棘轮 lite"）。
-3. AEAD = XChaCha20-Poly1305（首选 libsodium）/AES-256-GCM（Tink 回退）。
+3. AEAD = AES-256-GCM（Tink 提供，纯 JVM 依赖）。XChaCha20-Poly1305 列入 roadmap。
 4. AAD 包含 `sender_device_id || recipient_device_id || conv_id || msg_id`。
 5. 服务器看到的字段：`from, to, conv_id, msg_id, ts, ciphertext_b64, nonce, type=encrypted`。
 

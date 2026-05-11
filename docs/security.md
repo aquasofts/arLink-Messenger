@@ -25,8 +25,7 @@
 | 身份签名 | Ed25519 | `Ed25519X25519.sign` |
 | 密钥协商 | X25519 ECDH | `Ed25519X25519.dh` |
 | KDF | HKDF-SHA256 | `Hkdf.derive` |
-| AEAD（首选） | XChaCha20-Poly1305 (24B nonce, 16B tag) | `XChaChaPolyCipher` |
-| AEAD（回退） | AES-256-GCM (12B nonce, 16B tag) | `AesGcmCipher` |
+| AEAD | AES-256-GCM (12B nonce, 16B tag, Tink/JCE) | `AesGcmCipher` |
 | 设备 ID | base32(sha256(pk))[:24] 小写无 padding | `IdentityKeyStore.deviceIdOf` + `server/internal/auth.DeviceIDFromPubKey` |
 | 安全码 | 5200×SHA-512 → 30B → 60 位十进制 → 12 组 ×5 | `SafetyNumber.compute` |
 
@@ -110,7 +109,7 @@ grep -RIn -E "Log\.(d|i|v|w|e)" app/src/main | grep -Ei "ciphertext|nonce|secret
 | 项 | 检查 |
 |----|------|
 | 依赖版本 | 集中在 `libs.versions.toml` 与 `go.mod`，便于审计 |
-| 二进制依赖 | libsodium .so 来自 lazysodium（已知信任来源） |
+| 二进制依赖 | 纯 JVM（Tink）—— 不引入任何 .so |
 | 服务器二进制 | 多阶段 Dockerfile + `-trimpath -ldflags="-s -w"` |
 | 镜像基础 | `alpine:3.20`（最小化攻击面） |
 | 反向代理 | Caddy 官方镜像 `caddy:2-alpine` |

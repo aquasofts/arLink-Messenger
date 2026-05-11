@@ -14,19 +14,16 @@ import javax.inject.Singleton
  * 身份密钥的本地保管。
  *
  * 设计：
- *  1. Ed25519/X25519 长期密钥在 [Ed25519X25519.generate] 生成。
+ *  1. Ed25519 与 X25519 长期密钥由 [Ed25519X25519.generate] 生成，两段互相独立。
  *  2. 私钥用 Android Keystore 的 MasterKey 包裹（AES-GCM via Jetpack Security's EncryptedFile）。
  *  3. 文件落在 app 私有目录，不进 Room，避免 DB 备份/导出误带。
  *  4. 公钥单独以 plain 文件缓存便于启动快速读取；私钥仅在 sign/DH 时解密进内存，使用完 wipe。
  *
- * 失败回退路径：
- *  - MasterKey 可能在低版本/被 Root 的机器失败 → 抛异常并由 UI 提示用户。
- *  - 未来可选 StrongBox：MasterKey.Builder.setStrongBoxBacked(true)（本类已按 API 可用则启用）。
+ * 二进制布局：
+ *   identity.pub     —— 64B = edPub(32) || xPub(32)
+ *   identity.sk.enc  —— 被 EncryptedFile 包裹的 64B = edPriv(32) || xPriv(32)
  *
- * 注意：并未依赖 androidx.security.crypto 在 build.gradle 中显式声明 —— 读者若在 gradle 报缺失，
- * 在 libs.versions.toml 中补 `androidx.security:security-crypto:1.1.0-alpha06` 即可。当前代码
- * 不包含该依赖声明（项目作者可按偏好二选一：Jetpack Security 或手工 Keystore AES-GCM 包裹）。
- * 生产环境建议打开。
+ * 失败回退路径：MasterKey 在被 Root 的机器上可能失败；抛异常交由 UI 处理。
  */
 @Singleton
 class IdentityKeyStore @Inject constructor(
@@ -51,9 +48,9 @@ class IdentityKeyStore @Inject constructor(
         val kp = Ed25519X25519.generate()
         try {
             pubFile.writeBytes(encodePublic(kp.edPub, kp.xPub))
-            writeEncrypted(skFile, encodeSecret(kp.edSk, kp.xSk))
+            writeEncrypted(skFile, encodeSecret(kp.edPriv, kp.xPriv))
         } finally {
-            CryptoUtils.wipe(kp.edSk, kp.xSk)
+            CryptoUtils.wipe(kp.edPriv, kp.xPriv)
         }
         PublicIdentity(kp.edPub, kp.xPub, deviceIdOf(kp.edPub))
     }
@@ -64,14 +61,14 @@ class IdentityKeyStore @Inject constructor(
     }
 
     /**
-     * 使用长期私钥签名：私钥临时加载，函数返回即擦除。
+     * 使用长期 Ed25519 私钥签名：私钥临时加载，函数返回即擦除。
      */
     suspend fun sign(message: ByteArray): ByteArray = withContext(Dispatchers.IO) {
-        val (edSk, _) = loadSecretInternal()
+        val (edPriv, _) = loadSecretInternal()
         try {
-            Ed25519X25519.sign(edSk, message)
+            Ed25519X25519.sign(edPriv, message)
         } finally {
-            CryptoUtils.wipe(edSk)
+            CryptoUtils.wipe(edPriv)
         }
     }
 
@@ -79,11 +76,11 @@ class IdentityKeyStore @Inject constructor(
      * 使用长期 X25519 私钥与对端 X25519 公钥做 ECDH，返回 32B 共享秘密。
      */
     suspend fun dh(peerXPub: ByteArray): ByteArray = withContext(Dispatchers.IO) {
-        val (_, xSk) = loadSecretInternal()
+        val (_, xPriv) = loadSecretInternal()
         try {
-            Ed25519X25519.dh(xSk, peerXPub)
+            Ed25519X25519.dh(xPriv, peerXPub)
         } finally {
-            CryptoUtils.wipe(xSk)
+            CryptoUtils.wipe(xPriv)
         }
     }
 
@@ -131,14 +128,14 @@ class IdentityKeyStore @Inject constructor(
         return raw.copyOfRange(0, 32) to raw.copyOfRange(32, 64)
     }
 
-    private fun encodeSecret(edSk: ByteArray, xSk: ByteArray): ByteArray {
-        require(edSk.size == 64 && xSk.size == 32)
-        return edSk + xSk
+    private fun encodeSecret(edPriv: ByteArray, xPriv: ByteArray): ByteArray {
+        require(edPriv.size == 32 && xPriv.size == 32)
+        return edPriv + xPriv
     }
 
     private fun decodeSecret(raw: ByteArray): Pair<ByteArray, ByteArray> {
-        require(raw.size == 96) { "identity.sk corrupted" }
-        return raw.copyOfRange(0, 64) to raw.copyOfRange(64, 96)
+        require(raw.size == 64) { "identity.sk corrupted" }
+        return raw.copyOfRange(0, 32) to raw.copyOfRange(32, 64)
     }
 
     private fun deviceIdOf(edPub: ByteArray): String =

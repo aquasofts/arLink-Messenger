@@ -9,7 +9,7 @@ import java.security.SecureRandom
  * Ed25519 签名 + X25519 ECDH。
  *
  * 实现说明：
- *  - Tink 的 Ed25519 与 X25519 是两套独立的密钥；不像 libsodium 那样可以从 Ed 私钥派生 X 私钥。
+ *  - Tink 的 Ed25519 与 X25519 是两套独立的密钥；不像某些 NaCl 绑定那样可以从 Ed 私钥派生 X 私钥。
  *  - 所以本工程把 "身份" 拆成 (edPub, edPriv32, xPub, xPriv32)：四段独立字节串。
  *    edPriv 是 Ed25519 的 32 字节种子（Tink 的 `Ed25519Sign(seed)` 入参），
  *    xPriv 是 X25519 的 32 字节私钥。
@@ -51,12 +51,11 @@ object Ed25519X25519 {
         return Ed25519Sign(edPriv).sign(message)
     }
 
+    /** 验证签名。验证失败 / 输入异常都返回 false，不抛。 */
     fun verify(edPub: ByteArray, message: ByteArray, sig: ByteArray): Boolean = try {
         Ed25519Verify(edPub).verify(sig, message)
         true
-    } catch (_: GeneralSecurityException) {
-        false
-    } catch (_: Exception) {
+    } catch (t: Throwable) {
         false
     }
 
@@ -64,6 +63,3 @@ object Ed25519X25519 {
     fun dh(xPriv: ByteArray, peerXPub: ByteArray): ByteArray =
         X25519.computeSharedSecret(xPriv, peerXPub)
 }
-
-// 仅为了 import 不出错的便利别名
-private typealias GeneralSecurityException = java.security.GeneralSecurityException
