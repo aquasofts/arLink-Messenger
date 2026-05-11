@@ -193,6 +193,7 @@ class NearLinkForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
+    @SuppressLint("MissingPermission")
     override fun onDestroy() {
         scope.cancel()
         runCatching { advertiser.stop() }
