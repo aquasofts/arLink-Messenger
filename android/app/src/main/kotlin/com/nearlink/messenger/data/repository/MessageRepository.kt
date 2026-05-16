@@ -5,7 +5,7 @@ import com.nearlink.messenger.core.crypto.IdentityKeyStore
 import com.nearlink.messenger.core.model.Message
 import com.nearlink.messenger.core.model.MessageStatus
 import com.nearlink.messenger.core.model.MessageType
-import com.nearlink.messenger.core.protocol.NLJson
+import com.nearlink.messenger.core.model.TrustState
 import com.nearlink.messenger.core.protocol.PlaintextBody
 import com.nearlink.messenger.core.protocol.PlaintextEnvelope
 import com.nearlink.messenger.core.protocol.PlaintextRef
@@ -17,9 +17,12 @@ import com.nearlink.messenger.data.local.dao.MessageDao
 import com.nearlink.messenger.data.local.dao.OutboxDao
 import com.nearlink.messenger.data.local.entity.MessageEntity
 import com.nearlink.messenger.data.local.entity.OutboxEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -41,6 +44,13 @@ class MessageRepository @Inject constructor(
 ) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
+    private val scope = CoroutineScope(SupervisorJob())
+
+    init {
+        scope.launch {
+            transport.ackEvents().collect { ack -> applyAck(ack) }
+        }
+    }
 
     fun observeConv(convId: String): Flow<List<Message>> =
         msgDao.observeConv(convId).map { list -> list.map { it.toDomain() } }
@@ -157,24 +167,7 @@ class MessageRepository @Inject constructor(
         var last: DeliveryAck = DeliveryAck.Failed(envelope.clientMsgId, "no_attempt", retryable = true)
         transport.send(envelope).collect { ack ->
             last = ack
-            when (ack) {
-                is DeliveryAck.Sent -> msgDao.updateStatus(envelope.clientMsgId, MessageStatus.SENT, System.currentTimeMillis())
-                is DeliveryAck.Delivered -> {
-                    val ts = System.currentTimeMillis()
-                    msgDao.updateStatus(envelope.clientMsgId, MessageStatus.DELIVERED, ts, deliveredAt = ts)
-                    outboxDao.delete(envelope.clientMsgId)
-                }
-                is DeliveryAck.Queued -> {
-                    msgDao.updateStatus(envelope.clientMsgId, MessageStatus.SENT, System.currentTimeMillis())
-                    outboxDao.delete(envelope.clientMsgId) // 服务器已收，本地不再需要重试
-                }
-                is DeliveryAck.Failed -> {
-                    if (!ack.retryable) {
-                        msgDao.updateStatus(envelope.clientMsgId, MessageStatus.FAILED, System.currentTimeMillis())
-                        outboxDao.delete(envelope.clientMsgId)
-                    }
-                }
-            }
+            applyAck(ack)
         }
         return last
     }
@@ -191,7 +184,7 @@ class MessageRepository @Inject constructor(
         val plaintextBytes = try {
             crypto.openWithPeer(pub.deviceId, envelope, sender.pkX)
         } catch (t: Throwable) {
-            // 解密失败 → 标记 trust 变化由上层 UseCase 处理
+            contactRepo.setTrustState(envelope.fromDeviceId, TrustState.CHANGED)
             return false
         }
         val plaintext = json.decodeFromString(PlaintextEnvelope.serializer(), String(plaintextBytes))
@@ -326,6 +319,26 @@ class MessageRepository @Inject constructor(
             if (ack is DeliveryAck.Failed && ack.retryable) {
                 val nextDelay = backoff(item.attempts)
                 outboxDao.reschedule(item.clientMsgId, now + nextDelay)
+            }
+        }
+    }
+
+    private suspend fun applyAck(ack: DeliveryAck) {
+        when (ack) {
+            is DeliveryAck.Sent -> msgDao.updateStatus(ack.clientMsgId, MessageStatus.SENT, ack.atMs)
+            is DeliveryAck.Delivered -> {
+                msgDao.updateStatus(ack.clientMsgId, MessageStatus.DELIVERED, ack.atMs, deliveredAt = ack.atMs)
+                outboxDao.delete(ack.clientMsgId)
+            }
+            is DeliveryAck.Queued -> {
+                msgDao.updateStatus(ack.clientMsgId, MessageStatus.SENT, ack.atMs)
+                outboxDao.delete(ack.clientMsgId)
+            }
+            is DeliveryAck.Failed -> {
+                if (!ack.retryable) {
+                    msgDao.updateStatus(ack.clientMsgId, MessageStatus.FAILED, System.currentTimeMillis())
+                    outboxDao.delete(ack.clientMsgId)
+                }
             }
         }
     }

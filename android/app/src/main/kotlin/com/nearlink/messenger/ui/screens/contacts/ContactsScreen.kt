@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.nearlink.messenger.core.model.AggregatedPresence
 import com.nearlink.messenger.ui.components.ContactRow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,11 +70,11 @@ fun ContactsScreen(
                     .padding(padding)
                     .fillMaxSize(),
             ) {
-                items(contacts, key = { it.deviceId }) { contact ->
+                items(contacts, key = { it.contact.deviceId }) { item ->
                     ContactRow(
-                        contact = contact,
-                        presence = AggregatedPresence.OFFLINE,
-                        onClick = { onOpenChat(contact.deviceId) },
+                        contact = item.contact,
+                        presence = item.presence,
+                        onClick = { onOpenChat(item.contact.deviceId) },
                     )
                 }
             }

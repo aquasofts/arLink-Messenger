@@ -79,6 +79,9 @@ interface MessageDao {
     @Query("UPDATE messages SET reactions_json = :json, updated_at_ms = :now WHERE id = :id")
     suspend fun setReactions(id: String, json: String?, now: Long)
 
+    @Query("UPDATE messages SET att_local_uri = :localUri, updated_at_ms = :now WHERE id = :id")
+    suspend fun setAttachmentLocalUri(id: String, localUri: String, now: Long)
+
     @Transaction
     suspend fun insertWithDedup(message: MessageEntity): Boolean {
         val rowId = insertIfAbsent(message)

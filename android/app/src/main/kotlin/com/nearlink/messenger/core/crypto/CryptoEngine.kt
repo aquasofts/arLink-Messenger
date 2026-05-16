@@ -3,7 +3,7 @@ package com.nearlink.messenger.core.crypto
 import com.nearlink.messenger.core.transport.Envelope
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.util.UUID
+import java.security.SecureRandom
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -72,17 +72,6 @@ class CryptoEngine @Inject constructor(
         }
     }
 
-    suspend fun open(
-        selfDeviceId: String,
-        envelope: Envelope,
-    ): ByteArray {
-        val peerXPubViaContact = envelope.fromDeviceId    // Repository 需要按 from 查 pk_x 传进来
-        // 为保持 CryptoEngine 纯净：把 peerXPub 的查找放到 Repository 那一层，
-        // 这里要求调用方提前把 envelope.aad 中的 from 对照到其静态 pk_x 之后，才调用 [openWithPeer]。
-        throw UnsupportedOperationException("use openWithPeer(selfDeviceId, envelope, peerStaticXPub)")
-    }
-
-    /** 调用方负责把发送方的静态 X25519 公钥查出来并传入。 */
     suspend fun openWithPeer(
         selfDeviceId: String,
         envelope: Envelope,
@@ -110,10 +99,52 @@ class CryptoEngine @Inject constructor(
         if (alg == aead.alg) aead else throw IllegalStateException("unsupported alg: $alg")
 
     companion object {
+        private val random = SecureRandom()
+        private var lastTimestampMs = 0L
+        private var sequence = 0
+
         fun buildAad(from: String, to: String, convId: String, clientMsgId: String): ByteArray =
             "$from|$to|$convId|$clientMsgId".toByteArray(Charsets.UTF_8)
 
-        fun newClientMsgId(): String = UUID.randomUUID().toString()   // v4；项目内 TODO：换 ULID/UUIDv7
+        @Synchronized
+        fun newClientMsgId(nowMs: Long = System.currentTimeMillis()): String {
+            val timestampMs = nowMs.coerceAtLeast(lastTimestampMs)
+            sequence = if (timestampMs == lastTimestampMs) (sequence + 1) and 0x0fff else random.nextInt(0x1000)
+            lastTimestampMs = timestampMs
+
+            val bytes = ByteArray(16)
+            bytes[0] = (timestampMs ushr 40).toByte()
+            bytes[1] = (timestampMs ushr 32).toByte()
+            bytes[2] = (timestampMs ushr 24).toByte()
+            bytes[3] = (timestampMs ushr 16).toByte()
+            bytes[4] = (timestampMs ushr 8).toByte()
+            bytes[5] = timestampMs.toByte()
+            bytes[6] = (0x70 or (sequence ushr 8)).toByte()
+            bytes[7] = sequence.toByte()
+            random.nextBytes(bytes, 8, 8)
+            bytes[8] = ((bytes[8].toInt() and 0x3f) or 0x80).toByte()
+            return bytes.toUuidString()
+        }
+
+        private fun SecureRandom.nextBytes(bytes: ByteArray, offset: Int, length: Int) {
+            val randomBytes = ByteArray(length)
+            nextBytes(randomBytes)
+            randomBytes.copyInto(bytes, offset)
+        }
+
+        private fun ByteArray.toUuidString(): String {
+            val chars = CharArray(36)
+            var charIndex = 0
+            for (i in indices) {
+                if (i == 4 || i == 6 || i == 8 || i == 10) chars[charIndex++] = '-'
+                val value = this[i].toInt() and 0xff
+                chars[charIndex++] = HEX[value ushr 4]
+                chars[charIndex++] = HEX[value and 0x0f]
+            }
+            return String(chars)
+        }
+
+        private val HEX = "0123456789abcdef".toCharArray()
     }
 }
 

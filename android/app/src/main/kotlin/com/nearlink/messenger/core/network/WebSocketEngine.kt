@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -209,7 +210,7 @@ class WebSocketEngine @Inject constructor(
             }
             WireFrameTypes.MSG_DELIVERED -> {
                 val d = codec.asMsgDelivered(frame)
-                scope.launch { ackFlow.emit(DeliveryAck.Delivered(d.serverMsgId, name, frame.ts)) }
+                scope.launch { ackFlow.emit(DeliveryAck.Delivered(d.clientMsgId, name, frame.ts)) }
             }
             WireFrameTypes.PRESENCE_UPDATE -> {
                 val p = codec.asPresence(frame)
@@ -221,6 +222,16 @@ class WebSocketEngine @Inject constructor(
             }
             WireFrameTypes.PULL_OFFLINE_CHUNK -> {
                 val chunk = codec.asPullOfflineChunk(frame)
+                chunk.messages.forEach { element ->
+                    val relay = WireFrame(
+                        type = WireFrameTypes.MSG_RELAY,
+                        id = codec.newFrameId(),
+                        ts = frame.ts,
+                        from = frame.from,
+                        payload = element as? JsonObject ?: return@forEach,
+                    )
+                    handleText(codec.encode(relay))
+                }
                 scope.launch { pullChunkFlow.emit(PullChunkEvent(chunk.messages, chunk.hasMore, chunk.cursor)) }
             }
             WireFrameTypes.ERROR -> {
@@ -254,7 +265,7 @@ class WebSocketEngine @Inject constructor(
             return@flow
         }
         // Sent/Delivered/Queued/Failed 通过服务器 ack 帧异步抵达，订阅方应同时听 [ackEvents]。
-        emit(DeliveryAck.Sent(envelope.clientMsgId, name, System.currentTimeMillis()))
+        emit(DeliveryAck.Queued(envelope.clientMsgId, System.currentTimeMillis()))
     }
 
     fun pullOffline(sinceTs: Long) {

@@ -103,7 +103,6 @@ class BluetoothEngine @Inject constructor(
             // Delivered 由对端 MSG_ACK 触发，readLoop 会通过 sessionAckBus 发出
             active.pendingAcks[envelope.clientMsgId] = true
         } catch (t: IOException) {
-            Log.w(TAG, "BT send failed: $t")
             emit(DeliveryAck.Failed(envelope.clientMsgId, t.javaClass.simpleName, retryable = true))
             onSessionClosed(envelope.toDeviceId)
         }
@@ -124,13 +123,12 @@ class BluetoothEngine @Inject constructor(
                     }
                     BtPacketType.PONG -> { /* RTT 统计可选，先忽略 */ }
                     BtPacketType.BYE -> { onSessionClosed(peerDeviceId); break }
-                    else -> Log.d(TAG, "bt rx ignored type=${frame.debugTag()}")
+                    else -> Unit
                 }
             }
-        } catch (e: EOFException) {
-            Log.i(TAG, "bt session EOF: $peerDeviceId")
+        } catch (_: EOFException) {
         } catch (e: IOException) {
-            Log.w(TAG, "bt session io: $peerDeviceId / $e")
+            Log.w(TAG, "bt session io: ${e.javaClass.simpleName}")
         } finally {
             onSessionClosed(peerDeviceId)
         }

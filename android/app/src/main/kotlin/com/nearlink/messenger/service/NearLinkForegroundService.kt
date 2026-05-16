@@ -39,8 +39,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -132,12 +135,29 @@ class NearLinkForegroundService : Service() {
                 if (st == WebSocketEngine.State.CONNECTED) {
                     val since = settings.lastSyncedTs.first()
                     ws.pullOffline(since)
-                    // 同时把本地联系人 device_ids 订阅一遍
-                    val ids = contacts.observeAll().first().map { it.deviceId }
-                    if (ids.isNotEmpty()) ws.subscribePresence(ids)
                 }
             }
         }
+
+        contacts.observeAll()
+            .map { list -> list.map { it.deviceId }.distinct().sorted() }
+            .distinctUntilChanged()
+            .debounce(300)
+            .onEach { ids ->
+                if (ids.isNotEmpty() && ws.state.value == WebSocketEngine.State.CONNECTED) {
+                    ws.subscribePresence(ids)
+                }
+            }
+            .launchIn(scope)
+
+        ws.state
+            .onEach { st ->
+                if (st == WebSocketEngine.State.CONNECTED) {
+                    val ids = contacts.observeAll().first().map { it.deviceId }.distinct()
+                    if (ids.isNotEmpty()) ws.subscribePresence(ids)
+                }
+            }
+            .launchIn(scope)
 
         // 5) LAN Wi-Fi / hotspot encrypted transport
         lan.start()

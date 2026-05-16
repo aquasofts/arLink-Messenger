@@ -63,4 +63,23 @@ class CryptoEngineTest {
         val b = Hkdf.derive(salt, ikm, "msg-2".toByteArray(), 32)
         assertThat(a).isNotEqualTo(b)
     }
+
+    @Test
+    fun `client message ids are uuidv7 and time ordered`() {
+        val first = CryptoEngine.newClientMsgId(nowMs = 1_700_000_000_000)
+        val second = CryptoEngine.newClientMsgId(nowMs = 1_700_000_000_001)
+
+        assertThat(first).hasLength(36)
+        assertThat(first[14]).isEqualTo('7')
+        assertThat(first[19]).isIn(listOf('8', '9', 'a', 'b'))
+        assertThat(first).isLessThan(second)
+    }
+
+    @Test
+    fun `client message ids are unique within the same millisecond`() {
+        val ids = (0 until 512).map { CryptoEngine.newClientMsgId(nowMs = 1_700_000_000_002) }
+
+        assertThat(ids.toSet()).hasSize(ids.size)
+        assertThat(ids).isEqualTo(ids.sorted())
+    }
 }

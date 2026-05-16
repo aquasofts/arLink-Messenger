@@ -80,9 +80,9 @@ class TransportManager @Inject constructor(
         if (prefer == TransportChannel.WIFI_LAN && lan.isAvailable(peerDeviceId)) return TransportChannel.WIFI_LAN
         if (prefer == TransportChannel.SERVER && ws.isAvailable(peerDeviceId)) return TransportChannel.SERVER
         return when {
-            lan.isAvailable(peerDeviceId) -> TransportChannel.WIFI_LAN
             bt.isAvailable(peerDeviceId) -> TransportChannel.BLUETOOTH
             ws.isAvailable(peerDeviceId) -> TransportChannel.SERVER
+            lan.isAvailable(peerDeviceId) -> TransportChannel.WIFI_LAN
             else -> TransportChannel.AUTO
         }
     }

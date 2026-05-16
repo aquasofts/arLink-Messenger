@@ -63,6 +63,7 @@
         android:theme="@style/Theme.NearLink"
         android:enableOnBackInvokedCallback="true"
         android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/debug_network_security_config"
         tools:targetApi="33">
 
         <activity

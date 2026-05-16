@@ -80,7 +80,8 @@ data class WireMsgAck(
 
 @Serializable
 data class WireMsgDelivered(
-    @SerialName("server_msg_id") val serverMsgId: String,
+    @SerialName("client_msg_id") val clientMsgId: String,
+    @SerialName("server_msg_id") val serverMsgId: String? = null,
     @SerialName("to_device_id") val toDeviceId: String,
 )
 

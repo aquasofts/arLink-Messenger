@@ -3,11 +3,14 @@ package com.nearlink.messenger.data.repository
 import com.nearlink.messenger.core.bluetooth.BluetoothEngine
 import com.nearlink.messenger.core.network.WebSocketEngine
 import com.nearlink.messenger.core.model.PresenceState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,9 +23,19 @@ class PresenceRepository @Inject constructor(
     private val ws: WebSocketEngine,
 ) {
     private val serverPresence = MutableStateFlow<Map<String, PresenceState>>(emptyMap())
+    private val scope = CoroutineScope(SupervisorJob())
 
     init {
-        // hooks 由 service 层 collect 后调用，这里仅暴露接口
+        scope.launch {
+            ws.observePresence().collect { event ->
+                applyServerEvent(
+                    deviceId = event.deviceId,
+                    online = event.state.equals("online", ignoreCase = true) ||
+                        event.state.equals("server_online", ignoreCase = true),
+                    lastSeen = event.lastSeen,
+                )
+            }
+        }
     }
 
     fun observe(deviceId: String): Flow<PresenceState> = combine(

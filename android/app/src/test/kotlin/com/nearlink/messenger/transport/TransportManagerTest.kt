@@ -17,12 +17,15 @@ class TransportManagerTest {
         prefer: TransportChannel,
         btAvailable: Boolean,
         wsAvailable: Boolean,
+        lanAvailable: Boolean = false,
     ): TransportChannel {
         if (prefer == TransportChannel.BLUETOOTH && btAvailable) return TransportChannel.BLUETOOTH
+        if (prefer == TransportChannel.WIFI_LAN && lanAvailable) return TransportChannel.WIFI_LAN
         if (prefer == TransportChannel.SERVER && wsAvailable) return TransportChannel.SERVER
         return when {
             btAvailable -> TransportChannel.BLUETOOTH
             wsAvailable -> TransportChannel.SERVER
+            lanAvailable -> TransportChannel.WIFI_LAN
             else -> TransportChannel.AUTO
         }
     }
@@ -55,5 +58,11 @@ class TransportManagerTest {
     fun `prefer SERVER falls back to bt when ws unavailable`() {
         assertThat(pick(TransportChannel.SERVER, btAvailable = true, wsAvailable = false))
             .isEqualTo(TransportChannel.BLUETOOTH)
+    }
+
+    @Test
+    fun `uses lan after bluetooth and server`() {
+        assertThat(pick(TransportChannel.AUTO, btAvailable = false, wsAvailable = false, lanAvailable = true))
+            .isEqualTo(TransportChannel.WIFI_LAN)
     }
 }
