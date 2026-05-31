@@ -9,6 +9,7 @@ import com.nearlink.messenger.core.model.TrustState
 import com.nearlink.messenger.core.protocol.PlaintextBody
 import com.nearlink.messenger.core.protocol.PlaintextEnvelope
 import com.nearlink.messenger.core.protocol.PlaintextRef
+import com.nearlink.messenger.core.network.WebSocketEngine
 import com.nearlink.messenger.core.transport.DeliveryAck
 import com.nearlink.messenger.core.transport.Envelope
 import com.nearlink.messenger.core.transport.TransportChannel
@@ -39,6 +40,7 @@ class MessageRepository @Inject constructor(
     private val crypto: CryptoEngine,
     private val identity: IdentityKeyStore,
     private val transport: TransportManager,
+    private val ws: WebSocketEngine,
     private val convRepo: ConversationRepository,
     private val contactRepo: ContactRepository,
 ) {
@@ -50,7 +52,21 @@ class MessageRepository @Inject constructor(
         scope.launch {
             transport.ackEvents().collect { ack -> applyAck(ack) }
         }
+        scope.launch {
+            transport.incoming().collect { envelope ->
+                runCatching { ingest(envelope) }
+            }
+        }
+        scope.launch {
+            ws.state.collect { state ->
+                if (state == WebSocketEngine.State.CONNECTED) {
+                    retryDue(System.currentTimeMillis())
+                }
+            }
+        }
     }
+
+    fun start() = Unit
 
     fun observeConv(convId: String): Flow<List<Message>> =
         msgDao.observeConv(convId).map { list -> list.map { it.toDomain() } }

@@ -65,31 +65,44 @@ func (t *Tracker) Snapshot(deviceID string) (online bool, lastSeen int64) {
 // 返回的 channel 必须由调用方持续消费，否则会阻塞。
 func (t *Tracker) Subscribe(subscriber string, targets []string) <-chan Event {
 	ch := make(chan Event, 32)
-	t.subsMu.Lock()
-	if _, ok := t.subs[subscriber]; !ok {
-		t.subs[subscriber] = map[string]chan Event{}
+	snapshots := make([]Event, 0, len(targets))
+	for _, target := range targets {
+		online, last := t.Snapshot(target)
+		snapshots = append(snapshots, Event{DeviceID: target, Online: online, LastSeen: last})
 	}
+
+	t.subsMu.Lock()
+	t.unsubscribeLocked(subscriber)
+	t.subs[subscriber] = map[string]chan Event{}
 	for _, target := range targets {
 		t.subs[subscriber][target] = ch
 	}
-	t.subsMu.Unlock()
 	// 立即推送当前快照
-	go func() {
-		for _, target := range targets {
-			online, last := t.Snapshot(target)
-			select {
-			case ch <- Event{DeviceID: target, Online: online, LastSeen: last}:
-			default:
-			}
+	for _, ev := range snapshots {
+		select {
+		case ch <- ev:
+		default:
 		}
-	}()
+	}
+	t.subsMu.Unlock()
 	return ch
 }
 
 func (t *Tracker) Unsubscribe(subscriber string) {
 	t.subsMu.Lock()
-	delete(t.subs, subscriber)
+	t.unsubscribeLocked(subscriber)
 	t.subsMu.Unlock()
+}
+
+func (t *Tracker) unsubscribeLocked(subscriber string) {
+	chans := map[chan Event]struct{}{}
+	for _, ch := range t.subs[subscriber] {
+		chans[ch] = struct{}{}
+	}
+	delete(t.subs, subscriber)
+	for ch := range chans {
+		close(ch)
+	}
 }
 
 func (t *Tracker) broadcast(deviceID string, online bool) {

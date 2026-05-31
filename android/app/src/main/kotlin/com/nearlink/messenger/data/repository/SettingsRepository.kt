@@ -1,5 +1,6 @@
 package com.nearlink.messenger.data.repository
 
+import com.nearlink.messenger.BuildConfig
 import com.nearlink.messenger.core.network.WebSocketEngine
 import com.nearlink.messenger.data.local.prefs.SettingsStore
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,7 @@ class SettingsRepository @Inject constructor(
     }
 
     suspend fun connectIfConfigured() {
-        val url = store.serverUrl.first()
+        val url = store.serverUrl.first() ?: BuildConfig.DEFAULT_SERVER_URL.takeUnless { it.contains("example.invalid") }
         if (!url.isNullOrBlank()) ws.connect(url)
     }
 

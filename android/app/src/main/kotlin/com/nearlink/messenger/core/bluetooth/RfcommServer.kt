@@ -50,7 +50,7 @@ class RfcommServer @Inject constructor(
         }
         serverSocket = server
         loopJob = scope.launch {
-            while (!isClosedForSend) {
+            while (true) {
                 try {
                     val socket = server.accept()
                     trySend(BtSession.fromSocket(socket))
@@ -66,8 +66,15 @@ class RfcommServer @Inject constructor(
     }
 
     fun shutdown() {
-        try { serverSocket?.close() } catch (_: IOException) {}
+        stop()
         scope.cancel()
+    }
+
+    fun stop() {
+        try { serverSocket?.close() } catch (_: IOException) {}
+        serverSocket = null
+        loopJob?.cancel()
+        loopJob = null
     }
 }
 

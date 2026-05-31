@@ -13,6 +13,7 @@ import com.nearlink.messenger.core.protocol.WirePullOfflineChunk
 import com.nearlink.messenger.core.protocol.WireServerHello
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -99,6 +100,9 @@ class WsMessageCodec @Inject constructor() {
 
     fun asPullOfflineChunk(frame: WireFrame): WirePullOfflineChunk =
         NLJson.decodeFromJsonElement(WirePullOfflineChunk.serializer(), frame.payload!!)
+
+    fun asFrame(element: JsonElement): WireFrame =
+        NLJson.decodeFromJsonElement(WireFrame.serializer(), element)
 
     fun asError(frame: WireFrame): WireError =
         NLJson.decodeFromJsonElement(WireError.serializer(), frame.payload!!)

@@ -54,3 +54,43 @@ func TestSubscribeReceivesEvents(t *testing.T) {
 		t.Fatal("disconnect event not received")
 	}
 }
+
+func TestUnsubscribeClosesSubscriberChannel(t *testing.T) {
+	tr := New()
+	ch := tr.Subscribe("subscriber", []string{"dev2"})
+	tr.Unsubscribe("subscriber")
+
+	expectClosed(t, ch, "unsubscribe did not close channel")
+}
+
+func TestSubscribeReplacesPreviousSubscriberChannel(t *testing.T) {
+	tr := New()
+	oldCh := tr.Subscribe("subscriber", []string{"old"})
+	newCh := tr.Subscribe("subscriber", []string{"new"})
+
+	expectClosed(t, oldCh, "old subscription channel was not closed")
+
+	tr.Connect("old")
+	select {
+	case ev := <-newCh:
+		if ev.DeviceID == "old" {
+			t.Fatal("new subscription received event for old target")
+		}
+	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+func expectClosed(t *testing.T, ch <-chan Event, timeoutMessage string) {
+	t.Helper()
+	deadline := time.After(time.Second)
+	for {
+		select {
+		case _, ok := <-ch:
+			if !ok {
+				return
+			}
+		case <-deadline:
+			t.Fatal(timeoutMessage)
+		}
+	}
+}

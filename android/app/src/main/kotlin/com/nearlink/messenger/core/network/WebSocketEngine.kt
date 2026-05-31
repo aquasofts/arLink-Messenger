@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -173,6 +172,11 @@ class WebSocketEngine @Inject constructor(
         val frame = runCatching { codec.decode(text) }.getOrElse {
             Log.w(TAG, "bad ws frame: $it"); return
         }
+        runCatching { handleFrame(frame) }
+            .onFailure { Log.w(TAG, "ws frame handling failed: $it") }
+    }
+
+    private fun handleFrame(frame: WireFrame) {
         when (frame.type) {
             WireFrameTypes.SERVER_HELLO -> {
                 retryAttempt = 0
@@ -210,7 +214,10 @@ class WebSocketEngine @Inject constructor(
             }
             WireFrameTypes.MSG_DELIVERED -> {
                 val d = codec.asMsgDelivered(frame)
-                scope.launch { ackFlow.emit(DeliveryAck.Delivered(d.clientMsgId, name, frame.ts)) }
+                val clientMsgId = d.effectiveClientMsgId
+                if (clientMsgId.isNotBlank()) {
+                    scope.launch { ackFlow.emit(DeliveryAck.Delivered(clientMsgId, name, frame.ts)) }
+                }
             }
             WireFrameTypes.PRESENCE_UPDATE -> {
                 val p = codec.asPresence(frame)
@@ -223,14 +230,12 @@ class WebSocketEngine @Inject constructor(
             WireFrameTypes.PULL_OFFLINE_CHUNK -> {
                 val chunk = codec.asPullOfflineChunk(frame)
                 chunk.messages.forEach { element ->
-                    val relay = WireFrame(
-                        type = WireFrameTypes.MSG_RELAY,
-                        id = codec.newFrameId(),
-                        ts = frame.ts,
-                        from = frame.from,
-                        payload = element as? JsonObject ?: return@forEach,
-                    )
-                    handleText(codec.encode(relay))
+                    runCatching { codec.asFrame(element) }
+                        .onSuccess { relay ->
+                            runCatching { handleFrame(relay) }
+                                .onFailure { Log.w(TAG, "offline frame handling failed: $it") }
+                        }
+                        .onFailure { Log.w(TAG, "bad offline frame: $it") }
                 }
                 scope.launch { pullChunkFlow.emit(PullChunkEvent(chunk.messages, chunk.hasMore, chunk.cursor)) }
             }
@@ -264,8 +269,8 @@ class WebSocketEngine @Inject constructor(
             emit(DeliveryAck.Failed(envelope.clientMsgId, "ws_send_failed", retryable = true))
             return@flow
         }
-        // Sent/Delivered/Queued/Failed 通过服务器 ack 帧异步抵达，订阅方应同时听 [ackEvents]。
-        emit(DeliveryAck.Queued(envelope.clientMsgId, System.currentTimeMillis()))
+        // 仅表示已写入本地 WebSocket 队列；服务器确认会通过 ackEvents 异步抵达。
+        emit(DeliveryAck.Sent(envelope.clientMsgId, name, System.currentTimeMillis()))
     }
 
     fun pullOffline(sinceTs: Long) {

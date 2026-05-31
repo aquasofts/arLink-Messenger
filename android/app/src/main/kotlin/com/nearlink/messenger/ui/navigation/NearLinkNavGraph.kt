@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import com.nearlink.messenger.ui.screens.chat.ChatScreen
 import com.nearlink.messenger.ui.screens.contacts.ContactsScreen
 import com.nearlink.messenger.ui.screens.home.HomeScreen
+import com.nearlink.messenger.ui.screens.pair.LanPairScreen
 import com.nearlink.messenger.ui.screens.onboarding.OnboardingScreen
 import com.nearlink.messenger.ui.screens.pair.PairScreen
 import com.nearlink.messenger.ui.screens.pair.SafetyNumberScreen
@@ -26,6 +27,7 @@ object Routes {
     const val Home = "home"
     const val Contacts = "contacts"
     const val Pair = "pair"
+    const val LanPair = "pair/lan"
     const val Safety = "safety/{deviceId}"
     fun safety(deviceId: String) = "safety/$deviceId"
     const val Chat = "chat/{convId}"
@@ -63,7 +65,7 @@ fun NearLinkNavGraph(startDestination: String = Routes.Onboarding) {
                 onOpenSettings = { nav.navigate(Routes.Settings) },
                 onOpenPair = { nav.navigate(Routes.Pair) },
                 onOpenQrContact = { nav.navigate(Routes.QrContact) },
-                onOpenHotspotPair = { nav.navigate(Routes.Pair) },
+                onOpenHotspotPair = { nav.navigate(Routes.LanPair) },
             )
         }
         composable(Routes.Contacts) {
@@ -76,6 +78,13 @@ fun NearLinkNavGraph(startDestination: String = Routes.Onboarding) {
         }
         composable(Routes.Pair) {
             PairScreen(
+                viewModel = hiltViewModel(),
+                onBack = { nav.popBackStack() },
+                onPaired = { peerDeviceId -> nav.navigate(Routes.safety(peerDeviceId)) },
+            )
+        }
+        composable(Routes.LanPair) {
+            LanPairScreen(
                 viewModel = hiltViewModel(),
                 onBack = { nav.popBackStack() },
                 onPaired = { peerDeviceId -> nav.navigate(Routes.safety(peerDeviceId)) },

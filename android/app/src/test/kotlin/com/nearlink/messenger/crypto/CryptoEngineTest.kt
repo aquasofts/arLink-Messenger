@@ -3,6 +3,7 @@ package com.nearlink.messenger.crypto
 import com.google.common.truth.Truth.assertThat
 import com.nearlink.messenger.core.crypto.AeadAuthException
 import com.nearlink.messenger.core.crypto.AesGcmCipher
+import com.nearlink.messenger.core.crypto.CryptoEngine
 import com.nearlink.messenger.core.crypto.Hkdf
 import org.junit.Test
 
@@ -69,10 +70,10 @@ class CryptoEngineTest {
         val first = CryptoEngine.newClientMsgId(nowMs = 1_700_000_000_000)
         val second = CryptoEngine.newClientMsgId(nowMs = 1_700_000_000_001)
 
-        assertThat(first).hasLength(36)
+        assertThat(first.length).isEqualTo(36)
         assertThat(first[14]).isEqualTo('7')
-        assertThat(first[19]).isIn(listOf('8', '9', 'a', 'b'))
-        assertThat(first).isLessThan(second)
+        assertThat(listOf('8', '9', 'a', 'b')).contains(first[19])
+        assertThat(first < second).isTrue()
     }
 
     @Test

@@ -22,7 +22,7 @@ type Hub struct {
 	store    storage.Store
 	rate     *ratelimit.Limiter
 
-	maxBytes int
+	maxBytes  int
 	pingEvery time.Duration
 	pongWait  time.Duration
 	writeWait time.Duration
@@ -84,6 +84,7 @@ func (h *Hub) Unregister(c *Client) {
 	}
 	h.mu.Unlock()
 	if ok && cur == c {
+		h.presence.Unsubscribe(c.deviceID)
 		h.presence.Disconnect(c.deviceID)
 		_ = h.store.UpdateLastSeen(context.Background(), c.deviceID, time.Now())
 	}
@@ -114,7 +115,7 @@ func (h *Hub) Route(ctx context.Context, sender *Client, payload EncryptedMessag
 				ClientMsgID: payload.ClientMsgID, Status: "relayed",
 			}))
 			_ = sender.send(NewFrame(TypeMsgDelivered, "", sender.deviceID, MsgDelivered{
-				ServerMsgID: payload.ClientMsgID, ToDeviceID: target.deviceID,
+				ClientMsgID: payload.ClientMsgID, ServerMsgID: payload.ClientMsgID, ToDeviceID: target.deviceID,
 			}))
 			return nil
 		}

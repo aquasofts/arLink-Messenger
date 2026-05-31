@@ -80,6 +80,7 @@ type MsgAck struct {
 }
 
 type MsgDelivered struct {
+	ClientMsgID string `json:"client_msg_id"`
 	ServerMsgID string `json:"server_msg_id"`
 	ToDeviceID  string `json:"to_device_id"`
 }

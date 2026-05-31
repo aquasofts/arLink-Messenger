@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
@@ -14,13 +15,15 @@ import (
 
 // 内存 store mock：仅用于单测，实现 storage.Store 必需方法。
 type memStore struct {
-	mu    sync.Mutex
-	off   []storage.Envelope
+	mu  sync.Mutex
+	off []storage.Envelope
 }
 
-func (m *memStore) UpsertDevice(ctx context.Context, _ string, _ []byte, _ time.Time) error { return nil }
-func (m *memStore) GetDevicePub(ctx context.Context, _ string) ([]byte, error)                { return nil, nil }
-func (m *memStore) UpdateLastSeen(ctx context.Context, _ string, _ time.Time) error           { return nil }
+func (m *memStore) UpsertDevice(ctx context.Context, _ string, _ []byte, _ time.Time) error {
+	return nil
+}
+func (m *memStore) GetDevicePub(ctx context.Context, _ string) ([]byte, error)      { return nil, nil }
+func (m *memStore) UpdateLastSeen(ctx context.Context, _ string, _ time.Time) error { return nil }
 func (m *memStore) EnqueueOffline(ctx context.Context, e storage.Envelope) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -41,11 +44,15 @@ func (m *memStore) DrainOffline(ctx context.Context, to string, since time.Time,
 	}
 	return out, nil
 }
-func (m *memStore) DeleteOffline(ctx context.Context, ids []string) error                  { return nil }
-func (m *memStore) GCOffline(ctx context.Context, _ time.Time) (int, error)                { return 0, nil }
-func (m *memStore) PutFileChunkMeta(ctx context.Context, _ string, _, _ int, _ string) error { return nil }
-func (m *memStore) HasFileChunk(ctx context.Context, _ string, _ int) (bool, error)         { return false, nil }
-func (m *memStore) Close() error                                                            { return nil }
+func (m *memStore) DeleteOffline(ctx context.Context, ids []string) error   { return nil }
+func (m *memStore) GCOffline(ctx context.Context, _ time.Time) (int, error) { return 0, nil }
+func (m *memStore) PutFileChunkMeta(ctx context.Context, _ string, _, _ int, _ string) error {
+	return nil
+}
+func (m *memStore) HasFileChunk(ctx context.Context, _ string, _ int) (bool, error) {
+	return false, nil
+}
+func (m *memStore) Close() error { return nil }
 
 // fakeClient 直接挂在 hub 里，绕过真实 ws conn。
 func fakeClient(deviceID string, sink chan WireFrame) *Client {
@@ -105,6 +112,13 @@ func TestRoute_OnlinePeer_RelaysAndAcks(t *testing.T) {
 			case TypeMsgAck:
 				relayedSeen = true
 			case TypeMsgDelivered:
+				var delivered MsgDelivered
+				if err := json.Unmarshal(f.Payload, &delivered); err != nil {
+					t.Fatal(err)
+				}
+				if delivered.ClientMsgID != "m1" {
+					t.Fatalf("expected delivered client_msg_id m1, got %q", delivered.ClientMsgID)
+				}
 				deliveredSeen = true
 			}
 		case <-time.After(time.Second):

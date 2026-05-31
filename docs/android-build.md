@@ -8,7 +8,7 @@
 ## 0. 一定要看的事
 
 - 蓝牙功能**强烈建议真机**调试。Android Studio 的模拟器没有真实 BLE。
-- 仓库里没有提交 `gradle-wrapper.jar`（二进制不放仓库）。**第一次编译必须先用 Android Studio 同步一次**（或手动跑一次 `gradle wrapper`），把 wrapper 生成出来，之后才能用 `./gradlew`。下面 §3 说怎么做。
+- 仓库已提交 Gradle Wrapper（`gradlew` / `gradlew.bat` / `gradle-wrapper.jar`）。第一次编译只需要联网下载 Gradle 8.9 发行包与 Android 依赖。
 - 包名是 `com.nearlink.messenger`，debug 变体会自动加 `.debug` 后缀（两个 build 可以共存）。
 
 ---
@@ -58,12 +58,11 @@ nearlink/
 
 ---
 
-## 3. 让 Gradle Wrapper 就位（**第一次必做**）
+## 3. 验证 Gradle Wrapper
 
-这一步是为了把 `gradle-wrapper.jar` 生成出来——它是 `./gradlew` 的引擎。
-有两种等价做法，挑一种：
+仓库已经自带 wrapper；第一次执行会自动下载 Gradle 8.9。
 
-### 做法 A：用 Android Studio 自动生成（推荐 0 命令行经验）
+### Android Studio
 
 1. 打开 **Android Studio**，选 `File → Open`，定位到 `nearlink/android/` 目录（注意是 `android` 子目录，不是仓库根）。
 2. 弹窗 "Trust Project" 选信任。
@@ -73,23 +72,20 @@ nearlink/
 期望产物：
 
 ```
-android/gradle/wrapper/gradle-wrapper.jar    ← 由 Android Studio 自动放进来
+android/gradle/wrapper/gradle-wrapper.jar
 android/gradlew                              ← Linux/macOS 启动器
 android/gradlew.bat                          ← Windows 启动器
 ```
 
-### 做法 B：命令行一次性生成
-
-如果你机器上已有任何版本的 Gradle（`gradle -v` 能跑）：
+### 命令行
 
 ```bash
 cd android
-gradle wrapper --gradle-version 8.9
+./gradlew --version          # macOS / Linux / WSL / Git Bash
+gradlew.bat --version        # Windows PowerShell / CMD
 ```
 
-完事后 `./gradlew --version` 应输出 `Gradle 8.9`。
-
-> 如果你没有任何 Gradle，又不想装 Android Studio：请装 SDKMAN (`curl -s "https://get.sdkman.io" | bash` → `sdk install gradle 8.9`)。
+输出里应看到 `Gradle 8.9`。
 
 ---
 

@@ -8,6 +8,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -45,7 +46,7 @@ class WsAuthenticator @Inject constructor(
      */
     suspend fun buildAuthHeader(httpsBase: String): String {
         val pub = identity.loadPublic()
-        val httpUrl = httpsBase.trimEnd('/') + "/v1/auth/challenge?device_id=" + pub.deviceId
+        val httpUrl = toChallengeUrl(httpsBase, pub.deviceId)
         val req = Request.Builder().url(httpUrl).get().build()
         val resp = http.newCall(req).execute()
         val body = resp.use {
@@ -67,14 +68,29 @@ class WsAuthenticator @Inject constructor(
     }
 
     fun toWsUrl(httpsBase: String): String {
-        val base = httpsBase.trimEnd('/')
+        val base = normalizeHttpBase(httpsBase)
         return when {
             base.startsWith("https://") -> "wss://" + base.removePrefix("https://") + "/v1/ws"
             base.startsWith("http://") -> "ws://" + base.removePrefix("http://") + "/v1/ws"
-            base.startsWith("wss://") || base.startsWith("ws://") -> {
-                if (base.endsWith("/v1/ws")) base else "$base/v1/ws"
-            }
             else -> "wss://$base/v1/ws"
+        }
+    }
+
+    companion object {
+        internal fun toChallengeUrl(input: String, deviceId: String): String {
+            val encodedDeviceId = URLEncoder.encode(deviceId, Charsets.UTF_8.name())
+            return normalizeHttpBase(input) + "/v1/auth/challenge?device_id=" + encodedDeviceId
+        }
+
+        internal fun normalizeHttpBase(input: String): String {
+            val trimmed = input.trim().trimEnd('/')
+            val httpBase = when {
+                trimmed.startsWith("wss://") -> "https://" + trimmed.removePrefix("wss://")
+                trimmed.startsWith("ws://") -> "http://" + trimmed.removePrefix("ws://")
+                trimmed.startsWith("https://") || trimmed.startsWith("http://") -> trimmed
+                else -> "https://$trimmed"
+            }
+            return httpBase.removeSuffix("/v1/ws").trimEnd('/')
         }
     }
 }

@@ -80,10 +80,12 @@ data class WireMsgAck(
 
 @Serializable
 data class WireMsgDelivered(
-    @SerialName("client_msg_id") val clientMsgId: String,
+    @SerialName("client_msg_id") val clientMsgId: String = "",
     @SerialName("server_msg_id") val serverMsgId: String? = null,
     @SerialName("to_device_id") val toDeviceId: String,
-)
+) {
+    val effectiveClientMsgId: String get() = clientMsgId.ifBlank { serverMsgId.orEmpty() }
+}
 
 @Serializable
 data class WirePullOffline(

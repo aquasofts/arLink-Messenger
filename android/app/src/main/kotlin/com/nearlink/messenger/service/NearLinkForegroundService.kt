@@ -35,6 +35,7 @@ import com.nearlink.messenger.domain.usecase.ReceiveMessageUseCase
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -117,6 +118,7 @@ class NearLinkForegroundService : Service() {
         }
     }
 
+    @OptIn(FlowPreview::class)
     private fun bootstrap() {
         // 1) 自动连接 WS（如配置）
         scope.launch { settings.connectIfConfigured() }

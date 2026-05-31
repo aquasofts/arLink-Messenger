@@ -45,8 +45,11 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
-    fun finish() {
-        viewModelScope.launch { identity.markOnboarded() }
+    fun finish(onDone: () -> Unit) {
+        viewModelScope.launch {
+            identity.markOnboarded()
+            onDone()
+        }
     }
 }
 
@@ -73,8 +76,7 @@ fun OnboardingScreen(
         state.deviceId?.let { Text("device_id: ${it.take(16)}…", style = MaterialTheme.typography.bodyMedium) }
         Spacer(Modifier.height(48.dp))
         Button(enabled = state.ready, onClick = {
-            viewModel.finish()
-            onDone()
+            viewModel.finish(onDone)
         }) {
             Text(stringResource(R.string.onboarding_continue))
         }
